@@ -33,23 +33,21 @@ function fmt(n: number): string {
   return n.toLocaleString();
 }
 
-const FUTURE_PLATFORMS = [
-  { name: "Instagram", icon: "📷" },
-  { name: "Facebook", icon: "🌐" },
-  { name: "TikTok", icon: "♪" },
-];
-
 export default function Dashboard() {
   const { status } = useSession();
   const [stats, setStats] = useState<YTStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [connectedProviders, setConnectedProviders] = useState<string[]>([]);
 
   useEffect(() => {
     if (status === "authenticated") {
-      fetch("/api/youtube/stats")
-        .then((r) => r.json())
-        .then((data) => {
-          setStats(data);
+      Promise.all([
+        fetch("/api/youtube/stats").then((r) => r.json()),
+        fetch("/api/auth/connected").then((r) => r.json()),
+      ])
+        .then(([ytData, connData]) => {
+          setStats(ytData);
+          setConnectedProviders(connData.providers ?? []);
           setLoading(false);
         })
         .catch(() => setLoading(false));
@@ -139,8 +137,52 @@ export default function Dashboard() {
               )}
             </div>
 
+            {/* Instagram */}
+            <div className="account-item">
+              <div className="account-platform-icon" style={{ background: "linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)", color: "#fff" }}>📷</div>
+              <div className="account-info">
+                <span className="account-name">Instagram</span>
+                <span className="account-meta">
+                  {connectedProviders.includes("instagram") ? "Connected" : "Not connected"}
+                </span>
+              </div>
+              {connectedProviders.includes("instagram") ? (
+                <span className="account-badge connected">✓ Connected</span>
+              ) : (
+                <button
+                  className="btn-primary account-connect-btn"
+                  onClick={() => signIn("instagram")}
+                  disabled={loading}
+                >
+                  Connect
+                </button>
+              )}
+            </div>
+
+            {/* Threads */}
+            <div className="account-item">
+              <div className="account-platform-icon" style={{ background: "#000", color: "#fff" }}>𝕋</div>
+              <div className="account-info">
+                <span className="account-name">Threads</span>
+                <span className="account-meta">
+                  {connectedProviders.includes("threads") ? "Connected" : "Not connected"}
+                </span>
+              </div>
+              {connectedProviders.includes("threads") ? (
+                <span className="account-badge connected">✓ Connected</span>
+              ) : (
+                <button
+                  className="btn-primary account-connect-btn"
+                  onClick={() => signIn("threads")}
+                  disabled={loading}
+                >
+                  Connect
+                </button>
+              )}
+            </div>
+
             {/* Future platforms */}
-            {FUTURE_PLATFORMS.map((p) => (
+            {[{ name: "Facebook", icon: "🌐" }, { name: "TikTok", icon: "♪" }].map((p) => (
               <div key={p.name} className="account-item">
                 <div className="account-platform-icon">{p.icon}</div>
                 <div className="account-info">
