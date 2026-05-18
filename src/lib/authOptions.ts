@@ -93,6 +93,20 @@ export const authOptions: NextAuthOptions = {
     ThreadsProvider,
   ],
   callbacks: {
+    async signIn({ account }) {
+      // Exchange Instagram short-lived token for a long-lived one (valid 60 days)
+      if (account?.provider === "instagram" && account.access_token) {
+        const res = await fetch(
+          `https://graph.instagram.com/access_token?grant_type=ig_exchange_token&client_secret=${process.env.META_APP_SECRET}&access_token=${account.access_token}`
+        )
+        const data = await res.json()
+        if (data.access_token) {
+          account.access_token = data.access_token
+          account.expires_at = Math.floor(Date.now() / 1000) + (data.expires_in ?? 5184000)
+        }
+      }
+      return true
+    },
     async session({ session, user }) {
       if (session.user) {
         (session.user as any).id = user.id;
