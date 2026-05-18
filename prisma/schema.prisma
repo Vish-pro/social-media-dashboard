@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // NextAuth Models
@@ -103,7 +104,7 @@ model Post {
   workspaceId     String
   socialAccountId String
   content         String
-  mediaUrls       String   @default("[]") // Stored as JSON stringified array for SQLite
+  mediaUrls       String[] @default([]) // Array of media URLs
   status          String   @default("DRAFT") // "DRAFT", "PENDING_APPROVAL", "APPROVED", "SCHEDULED", "PUBLISHED", "FAILED"
   scheduledFor    DateTime?
   publishedAt     DateTime?
