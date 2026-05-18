@@ -33,37 +33,34 @@ const ThreadsProvider: OAuthConfig<any> = {
   clientSecret: process.env.THREADS_APP_SECRET,
 };
 
-// Custom Instagram Graph API provider (auth goes through Facebook OAuth)
+// Instagram Business Login (no Facebook account required — works with Professional/Creator accounts)
 const InstagramProvider: OAuthConfig<any> = {
   id: "instagram",
   name: "Instagram",
   type: "oauth",
   authorization: {
-    url: "https://www.facebook.com/dialog/oauth",
+    url: "https://api.instagram.com/oauth/authorize",
     params: {
       scope: [
-        "instagram_basic",
-        "instagram_content_publish",
-        "instagram_manage_insights",
-        "pages_show_list",
-        "pages_read_engagement",
-        "threads_basic",
-        "threads_content_publish",
+        "instagram_business_basic",
+        "instagram_business_content_publish",
+        "instagram_business_manage_comments",
+        "instagram_business_manage_messages",
       ].join(","),
       response_type: "code",
     },
   },
-  token: "https://graph.facebook.com/oauth/access_token",
+  token: "https://api.instagram.com/oauth/access_token",
   userinfo: {
-    url: "https://graph.facebook.com/me",
-    params: { fields: "id,name,email,picture" },
+    url: "https://graph.instagram.com/me",
+    params: { fields: "id,name,username,profile_picture_url" },
   },
   profile(profile) {
     return {
       id: profile.id,
-      name: profile.name,
-      email: profile.email ?? null,
-      image: profile.picture?.data?.url ?? null,
+      name: profile.name ?? profile.username,
+      email: null,
+      image: profile.profile_picture_url ?? null,
     };
   },
   clientId: process.env.META_APP_ID,
