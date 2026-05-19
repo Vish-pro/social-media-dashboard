@@ -1,0 +1,3 @@
+## 2024-05-19 - Form Validation and Keyboard Accessibility Learnings
+**Learning:** Relied on `alert()` for basic form validation, which is disruptive to the user flow. Icon-only buttons frequently lack `aria-label`s, and custom interactive elements like dropzones need explicit keyboard support (`role="button"`, `tabIndex`, `onKeyDown`) and visual focus states to be accessible.
+**Action:** Always prefer graceful disabled states with tooltips over `alert()` for form validation. Always add `aria-label`s to icon-only buttons. When building custom interactive components, ensure they are keyboard navigable and have clear `:focus-visible` styles matching their hover states.

@@ -58,10 +58,6 @@ export default function NewPost() {
   };
 
   const handleShare = async () => {
-    if (!content.trim()) {
-      alert("Please write some content before sharing.");
-      return;
-    }
     setSubmitting(true);
     try {
       const res = await fetch("/api/youtube/upload", {
@@ -105,7 +101,7 @@ export default function NewPost() {
           <button className="ctb-btn">Templates</button>
           <button className="ctb-btn ctb-ai">✦ AI Assistant</button>
           <button className="ctb-btn ctb-preview">Preview</button>
-          <a href="/posts" className="ctb-close">✕</a>
+          <a href="/posts" className="ctb-close" aria-label="Close composer">✕</a>
         </div>
       </div>
 
@@ -150,7 +146,7 @@ export default function NewPost() {
               {mediaPreviews.map((src, i) => (
                 <div key={i} className="media-tile">
                   <img src={src} alt="" />
-                  <button className="media-tile-rm" onClick={() => removeMedia(i)}>✕</button>
+                  <button className="media-tile-rm" onClick={() => removeMedia(i)} aria-label="Remove media">✕</button>
                 </div>
               ))}
             </div>
@@ -163,6 +159,15 @@ export default function NewPost() {
             onDragLeave={() => setDragOver(false)}
             onDrop={(e) => { e.preventDefault(); setDragOver(false); addFiles(e.dataTransfer.files); }}
             onClick={() => fileInputRef.current?.click()}
+            role="button"
+            tabIndex={0}
+            aria-label="Upload media files"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                fileInputRef.current?.click();
+              }
+            }}
           >
             <span className="media-drop-icon">📎</span>
             <span>
@@ -274,7 +279,8 @@ export default function NewPost() {
           <button
             className="btn-primary share-btn"
             onClick={handleShare}
-            disabled={submitting}
+            disabled={submitting || !content.trim()}
+            title={!content.trim() ? "Write some content to share" : ""}
           >
             {submitting ? "Posting…" : "Share Now →"}
           </button>
