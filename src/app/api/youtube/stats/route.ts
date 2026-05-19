@@ -104,8 +104,8 @@ export async function GET() {
       },
       chartData,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("YouTube Stats Error:", error);
-    return NextResponse.json({ connected: false, error: error.message });
+    return NextResponse.json({ connected: false, error: error instanceof Error ? error.message : "Something went wrong" });
   }
 }
