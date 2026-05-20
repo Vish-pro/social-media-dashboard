@@ -109,6 +109,13 @@ button {
   box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
 }
 
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
 .btn-secondary {
   background-color: var(--bg-tertiary);
   color: var(--text-primary);

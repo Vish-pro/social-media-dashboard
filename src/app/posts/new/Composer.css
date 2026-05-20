@@ -245,7 +245,8 @@
 }
 
 .media-drop:hover,
-.media-drop.drag-active {
+.media-drop.drag-active,
+.media-drop:focus-visible {
   border-color: var(--accent-primary);
   background: rgba(99, 102, 241, 0.05);
   color: var(--text-primary);
