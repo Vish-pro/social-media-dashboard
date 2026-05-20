@@ -99,10 +99,10 @@ export async function POST(req: Request) {
       videoId,
       url: `https://www.youtube.com/watch?v=${videoId}`,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("YouTube Upload Error:", error);
     return NextResponse.json(
-      { error: error.message || "Something went wrong" },
+      { error: error instanceof Error ? error.message : "Something went wrong" },
       { status: 500 }
     );
   }
