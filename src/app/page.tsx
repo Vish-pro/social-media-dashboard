@@ -1,10 +1,13 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { useSession, signIn } from "next-auth/react";
+import useSWR from "swr";
 import StatCard from "@/components/StatCard";
 import ChartCard from "@/components/ChartCard";
 import "./page-styles.css";
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 interface Channel {
   name: string;
@@ -35,26 +38,21 @@ function fmt(n: number): string {
 
 export default function Dashboard() {
   const { status } = useSession();
-  const [stats, setStats] = useState<YTStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [connectedProviders, setConnectedProviders] = useState<string[]>([]);
 
-  useEffect(() => {
-    if (status === "authenticated") {
-      Promise.all([
-        fetch("/api/youtube/stats").then((r) => r.json()),
-        fetch("/api/auth/connected").then((r) => r.json()),
-      ])
-        .then(([ytData, connData]) => {
-          setStats(ytData);
-          setConnectedProviders(connData.providers ?? []);
-          setLoading(false);
-        })
-        .catch(() => setLoading(false));
-    } else if (status !== "loading") {
-      setLoading(false);
-    }
-  }, [status]);
+  const isAuth = status === "authenticated";
+
+  const { data: stats, isLoading: isStatsLoading } = useSWR<YTStats>(
+    isAuth ? "/api/youtube/stats" : null,
+    fetcher
+  );
+
+  const { data: connData, isLoading: isConnLoading } = useSWR<{ providers: string[] }>(
+    isAuth ? "/api/auth/connected" : null,
+    fetcher
+  );
+
+  const loading = status === "loading" || isStatsLoading || isConnLoading;
+  const connectedProviders = connData?.providers ?? [];
 
   const ch = stats?.channel;
   const placeholder = "—";
@@ -64,7 +62,7 @@ export default function Dashboard() {
       <div className="page-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
           <h1 className="page-title">Dashboard Overview</h1>
-          <p className="page-subtitle">Welcome back! Here's what's happening with your accounts today.</p>
+          <p className="page-subtitle">Welcome back! Here&apos;s what&apos;s happening with your accounts today.</p>
         </div>
         <a href="/posts/new" className="btn-primary" style={{ padding: "12px 24px" }}>
           <span>✍️</span> Create New Post
