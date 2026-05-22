@@ -4,6 +4,27 @@ import { google } from "googleapis";
 import { Readable } from "stream";
 import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/lib/authOptions";
+import dns from "dns/promises";
+
+async function isSafeUrl(urlStr: string) {
+  try {
+    const url = new URL(urlStr);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return false;
+
+    const hostname = url.hostname;
+    const isLocalhost = hostname === "localhost" || hostname === "[::1]" || hostname.endsWith(".local") || hostname.endsWith(".internal");
+
+    const lookupResult = await dns.lookup(hostname);
+    const ip = lookupResult.address;
+
+    const isPrivateIP = /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|0\.|169\.254\.)/.test(ip) || ip === "0.0.0.0";
+    const isIPv6Private = ip === "::1" || ip === "::" || ip.toLowerCase().startsWith("fe80:") || ip.toLowerCase().startsWith("fc00:") || ip.toLowerCase().startsWith("fd00:");
+
+    return !isLocalhost && !isPrivateIP && !isIPv6Private;
+  } catch {
+    return false;
+  }
+}
 
 export async function POST(req: Request) {
   try {
@@ -63,8 +84,17 @@ export async function POST(req: Request) {
 
     const youtube = google.youtube({ version: "v3", auth: oauth2Client });
 
+    const safeUrl = await isSafeUrl(videoUrl);
+    if (!safeUrl) {
+      return NextResponse.json(
+        { error: "Invalid or unsafe video URL provided." },
+        { status: 400 }
+      );
+    }
+
     // Fetch the video from the provided URL and stream it directly to YouTube
-    const videoResponse = await fetch(videoUrl);
+    // Use manual redirect to prevent redirect-based SSRF bypasses
+    const videoResponse = await fetch(videoUrl, { redirect: "manual" });
     if (!videoResponse.ok || !videoResponse.body) {
       return NextResponse.json(
         { error: "Failed to fetch video from the provided URL" },
