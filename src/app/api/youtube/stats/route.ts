@@ -68,8 +68,7 @@ export async function GET() {
     let chartData: { day: string; views: number; subscribers: number }[] = [];
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const analyticsAPI = (google as any).youtubeanalytics({
+      const analyticsAPI = google.youtubeAnalytics({
         version: "v2",
         auth: oauth2Client,
       });
