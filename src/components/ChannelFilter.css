@@ -1,0 +1,81 @@
+/* ── Dropdown Filter ── */
+.cal-dropdown-container {
+  position: relative;
+  display: inline-block;
+}
+
+.cal-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  width: 240px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.cal-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.cal-dropdown-item:hover {
+  background: var(--bg-tertiary);
+}
+
+.cal-dropdown-item input[type="checkbox"] {
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent-primary);
+}
+
+.cal-dropdown-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.cal-dropdown-avatar-placeholder {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--border-color);
+}
+
+.cal-dropdown-name {
+  font-size: 0.82rem;
+  color: var(--text-primary);
+}
+
+.cal-dropdown-empty {
+  padding: 16px;
+  text-align: center;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.clear-filter {
+  margin-left: 6px;
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.clear-filter:hover {
+  color: var(--text-primary);
+}

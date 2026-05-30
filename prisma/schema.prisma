@@ -67,6 +67,7 @@ model Workspace {
 
   members        WorkspaceMember[]
   socialAccounts SocialAccount[]
+  postGroups     PostGroup[]
   posts          Post[]
 }
 
@@ -89,7 +90,10 @@ model SocialAccount {
   platform    String   // e.g., "META_INSTAGRAM"
   accountId   String   // Platform specific ID
   accessToken String   // Encrypted or raw long-lived token
+  refreshToken String?
+  expiresAt   Int?
   accountName String
+  image       String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -99,18 +103,39 @@ model SocialAccount {
   @@unique([platform, accountId])
 }
 
+model PostGroup {
+  id           String    @id @default(cuid())
+  workspaceId  String
+  content      String    // Base caption
+  mediaUrls    String[]  @default([])
+  scheduledFor DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  posts        Post[]
+}
+
 model Post {
   id              String   @id @default(cuid())
   workspaceId     String
   socialAccountId String
-  content         String
-  mediaUrls       String[] @default([]) // Array of media URLs
+  postGroupId     String?  // The parent group
+  
+  // Platform-specific overrides
+  content         String?  // Override base content
+  mediaUrls       String[] @default([]) // Override base media
+  platformSettings Json?   // Specific settings (e.g., firstComment, tags)
+  
   status          String   @default("DRAFT") // "DRAFT", "PENDING_APPROVAL", "APPROVED", "SCHEDULED", "PUBLISHED", "FAILED"
-  scheduledFor    DateTime?
+  scheduledFor    DateTime? // Inherited from group, but can be overridden
   publishedAt     DateTime?
+  error           String?   // Store publishing error details
+  
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
   workspace     Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   socialAccount SocialAccount @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
+  postGroup     PostGroup?    @relation(fields: [postGroupId], references: [id], onDelete: Cascade)
 }

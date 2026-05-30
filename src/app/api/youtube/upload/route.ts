@@ -1,11 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import { getServerSession } from "next-auth";
 import { google } from "googleapis";
 import { Readable } from "stream";
 import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/lib/authOptions";
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
@@ -13,25 +13,30 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const account = await prisma.account.findFirst({
-      where: {
-        userId: (session.user as any).id,
-        provider: "google",
-      },
-    });
+    const formData = await req.formData();
+    const title = formData.get("title") as string;
+    const description = formData.get("description") as string;
+    const file = formData.get("file") as File;
+    const url = new URL(req.url);
+    // Actually, in page.tsx we didn't add workspaceId to the upload URL or formData!
+    // I need to update the upload URL in page.tsx as well. Or we can just read it from headers or URL params.
+    // Let's read from URL params if available, or throw.
+    const workspaceId = url.searchParams.get("workspaceId");
 
-    if (!account?.access_token) {
+    if (!title || !file || !workspaceId) {
       return NextResponse.json(
-        { error: "YouTube account not connected. Please sign in with Google." },
+        { error: "title, file, and workspaceId are required" },
         { status: 400 }
       );
     }
 
-    const { title, description, videoUrl } = await req.json();
+    const account = await prisma.socialAccount.findFirst({
+      where: { workspaceId, platform: "youtube" },
+    });
 
-    if (!title || !videoUrl) {
+    if (!account?.accessToken) {
       return NextResponse.json(
-        { error: "title and videoUrl are required" },
+        { error: "YouTube account not connected for this workspace." },
         { status: 400 }
       );
     }
@@ -43,19 +48,19 @@ export async function POST(req: Request) {
     );
 
     oauth2Client.setCredentials({
-      access_token: account.access_token,
-      refresh_token: account.refresh_token,
+      access_token: account.accessToken,
+      refresh_token: account.refreshToken,
     });
 
     // Persist refreshed tokens back to the database automatically
     oauth2Client.on("tokens", async (tokens) => {
-      await prisma.account.update({
+      await prisma.socialAccount.update({
         where: { id: account.id },
         data: {
-          ...(tokens.access_token && { access_token: tokens.access_token }),
-          ...(tokens.refresh_token && { refresh_token: tokens.refresh_token }),
+          ...(tokens.access_token && { accessToken: tokens.access_token }),
+          ...(tokens.refresh_token && { refreshToken: tokens.refresh_token }),
           ...(tokens.expiry_date && {
-            expires_at: Math.floor(tokens.expiry_date / 1000),
+            expiresAt: Math.floor(tokens.expiry_date / 1000),
           }),
         },
       });
@@ -63,16 +68,10 @@ export async function POST(req: Request) {
 
     const youtube = google.youtube({ version: "v3", auth: oauth2Client });
 
-    // Fetch the video from the provided URL and stream it directly to YouTube
-    const videoResponse = await fetch(videoUrl);
-    if (!videoResponse.ok || !videoResponse.body) {
-      return NextResponse.json(
-        { error: "Failed to fetch video from the provided URL" },
-        { status: 400 }
-      );
-    }
-
-    const videoStream = Readable.fromWeb(videoResponse.body as any);
+    // Convert the uploaded file to a Node.js Readable stream
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const videoStream = Readable.from(buffer);
 
     const uploadResponse = await youtube.videos.insert({
       part: ["snippet", "status"],

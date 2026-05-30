@@ -3,12 +3,19 @@
 import React, { useState, useEffect, useRef } from "react";
 import "./CalendarView.css";
 
+import { useWorkspace } from "@/contexts/WorkspaceContext";
+
 interface Post {
   id: string;
   content: string;
   scheduledFor: string | null;
   mediaUrls: string;
   status: string;
+  socialAccountId: string;
+}
+
+interface CalendarViewProps {
+  selectedChannels: Set<string>;
 }
 
 const HOUR_HEIGHT = 64; // px per hour
@@ -74,24 +81,36 @@ function parseMedia(raw: string): string[] {
 }
 
 /* ── component ── */
-export default function CalendarView() {
+export default function CalendarView({ selectedChannels }: CalendarViewProps) {
+  const { activeWorkspaceId } = useWorkspace();
   const today = new Date();
   const [weekStart, setWeekStart] = useState(() => startOfWeek(today));
   const [posts, setPosts] = useState<Post[]>([]);
+  
   const [selected, setSelected] = useState<Post | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
-  /* fetch posts whenever week changes */
+  /* fetch posts whenever week or selected channels change */
   useEffect(() => {
+    if (!activeWorkspaceId) {
+      setPosts([]);
+      return;
+    }
     const from = weekStart.toISOString().split("T")[0];
     const to = days[6].toISOString().split("T")[0];
-    fetch(`/api/posts?from=${from}&to=${to}`)
+    let url = `/api/posts?workspaceId=${activeWorkspaceId}&from=${from}&to=${to}`;
+    
+    if (selectedChannels.size > 0) {
+      url += `&channels=${Array.from(selectedChannels).join(",")}`;
+    }
+
+    fetch(url)
       .then((r) => r.json())
       .then((d) => setPosts(d.posts ?? []))
       .catch(() => {});
-  }, [weekStart]);
+  }, [weekStart, activeWorkspaceId, selectedChannels]);
 
   /* scroll to 8 AM on mount */
   useEffect(() => {
@@ -121,9 +140,6 @@ export default function CalendarView() {
           <div className="cal-view-pill">Week ▾</div>
         </div>
         <div className="cal-nav-right">
-          <button className="cal-filter-btn">All Posts ▾</button>
-          <button className="cal-filter-btn">Channels ▾</button>
-          <button className="cal-filter-btn">Tags ▾</button>
         </div>
       </div>
 
@@ -227,8 +243,8 @@ export default function CalendarView() {
 
               <div className="cal-popover-body">
                 <div className="cal-popover-channel">
-                  <div className="cal-popover-avatar yt-avatar">▶</div>
-                  <span className="cal-popover-channel-name">YouTube</span>
+                  <div className={`cal-popover-avatar ${selected.status}-avatar`}>▶</div>
+                  <span className="cal-popover-channel-name">Channel</span>
                 </div>
 
                 {media[0] && (

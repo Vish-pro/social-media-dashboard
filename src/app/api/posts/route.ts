@@ -10,11 +10,26 @@ export async function GET(req: Request) {
   }
 
   const { searchParams } = new URL(req.url);
+  const workspaceId = searchParams.get("workspaceId");
   const from = searchParams.get("from");
   const to = searchParams.get("to");
   const status = searchParams.get("status"); // "SCHEDULED" | "PUBLISHED" | "DRAFT" etc.
+  const channels = searchParams.get("channels"); // comma-separated channel IDs
 
-  const where: Record<string, unknown> = {};
+  if (!workspaceId) {
+    return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
+  }
+
+  const where: Record<string, unknown> = {
+    workspaceId,
+  };
+
+  if (channels) {
+    const channelIds = channels.split(",");
+    if (channelIds.length > 0) {
+      where.socialAccountId = { in: channelIds };
+    }
+  }
 
   if (from || to) {
     const range: Record<string, Date> = {};

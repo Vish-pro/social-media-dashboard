@@ -4,7 +4,7 @@ import { google } from "googleapis";
 import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/lib/authOptions";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const session = await getServerSession(authOptions);
 
@@ -12,11 +12,18 @@ export async function GET() {
       return NextResponse.json({ connected: false });
     }
 
-    const account = await prisma.account.findFirst({
-      where: { userId: (session.user as any).id, provider: "google" },
+    const url = new URL(req.url);
+    const workspaceId = url.searchParams.get("workspaceId");
+
+    if (!workspaceId) {
+      return NextResponse.json({ connected: false });
+    }
+
+    const account = await prisma.socialAccount.findFirst({
+      where: { workspaceId, platform: "youtube" },
     });
 
-    if (!account?.access_token) {
+    if (!account?.accessToken) {
       return NextResponse.json({ connected: false });
     }
 
@@ -27,18 +34,18 @@ export async function GET() {
     );
 
     oauth2Client.setCredentials({
-      access_token: account.access_token,
-      refresh_token: account.refresh_token,
+      access_token: account.accessToken,
+      refresh_token: account.refreshToken,
     });
 
     oauth2Client.on("tokens", async (tokens) => {
-      await prisma.account.update({
+      await prisma.socialAccount.update({
         where: { id: account.id },
         data: {
-          ...(tokens.access_token && { access_token: tokens.access_token }),
-          ...(tokens.refresh_token && { refresh_token: tokens.refresh_token }),
+          ...(tokens.access_token && { accessToken: tokens.access_token }),
+          ...(tokens.refresh_token && { refreshToken: tokens.refresh_token }),
           ...(tokens.expiry_date && {
-            expires_at: Math.floor(tokens.expiry_date / 1000),
+            expiresAt: Math.floor(tokens.expiry_date / 1000),
           }),
         },
       });

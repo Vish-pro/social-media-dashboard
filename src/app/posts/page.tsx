@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import CalendarView from "@/components/CalendarView";
+import ChannelFilter from "@/components/ChannelFilter";
 import "./posts.css";
 
 type Tab = "queue" | "drafts" | "approvals" | "sent";
@@ -37,33 +38,59 @@ const EMPTY: Record<Tab, { title: string; subtitle: string }> = {
 export default function PostsPage() {
   const [activeTab, setActiveTab] = useState<Tab>("queue");
   const [view, setView] = useState<View>("list");
+  const [selectedChannels, setSelectedChannels] = useState<Set<string>>(new Set());
+  const [isPostsDropdownOpen, setIsPostsDropdownOpen] = useState(false);
+  const postsDropdownRef = useRef<HTMLDivElement>(null);
+  
   const msg = EMPTY[activeTab];
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (postsDropdownRef.current && !postsDropdownRef.current.contains(event.target as Node)) {
+        setIsPostsDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   return (
     <div className="posts-page">
       {/* ── Top bar ── */}
       <div className="posts-header">
-        <div className="posts-tabs">
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              className={`posts-tab ${activeTab === tab.id ? "active" : ""}`}
-              onClick={() => setActiveTab(tab.id)}
-            >
-              {tab.label}
-              {tab.badge && <span className="tab-badge">{tab.badge}</span>}
-              <span className="tab-count">{tab.count}</span>
-            </button>
-          ))}
+        <div className="posts-tabs" style={{ visibility: "hidden" }}>
+          {/* We keep this div for flexbox spacing if needed, or remove it */}
         </div>
 
         <div className="posts-actions">
-          {view === "list" && (
-            <>
-              <button className="btn-secondary posts-filter-btn">Channels ▾</button>
-              <button className="btn-secondary posts-filter-btn">Tags ▾</button>
-            </>
-          )}
+          <div className="cal-dropdown-container" ref={postsDropdownRef}>
+            <button 
+              className="btn-secondary posts-filter-btn"
+              onClick={() => setIsPostsDropdownOpen(!isPostsDropdownOpen)}
+            >
+              <span className="icon">⧉</span> {TABS.find(t => t.id === activeTab)?.label === "Queue" ? "All Posts" : TABS.find(t => t.id === activeTab)?.label} ▾
+            </button>
+            {isPostsDropdownOpen && (
+              <div className="cal-dropdown-menu" style={{ width: "160px" }}>
+                <label className="cal-dropdown-item" onClick={() => { setActiveTab("queue"); setIsPostsDropdownOpen(false); }}>
+                  {activeTab === "queue" ? "✓ " : <span style={{width:"12px", display:"inline-block"}}></span>} All Posts
+                </label>
+                <label className="cal-dropdown-item" onClick={() => { setActiveTab("drafts"); setIsPostsDropdownOpen(false); }}>
+                  {activeTab === "drafts" ? "✓ " : <span style={{width:"12px", display:"inline-block"}}></span>} Drafts
+                </label>
+                <label className="cal-dropdown-item" onClick={() => { setActiveTab("approvals"); setIsPostsDropdownOpen(false); }}>
+                  {activeTab === "approvals" ? "✓ " : <span style={{width:"12px", display:"inline-block"}}></span>} Approvals
+                </label>
+                <label className="cal-dropdown-item" onClick={() => { setActiveTab("sent"); setIsPostsDropdownOpen(false); }}>
+                  {activeTab === "sent" ? "✓ " : <span style={{width:"12px", display:"inline-block"}}></span>} Sent
+                </label>
+              </div>
+            )}
+          </div>
+
+          <ChannelFilter selectedChannels={selectedChannels} onChange={setSelectedChannels} />
+          
+          <button className="btn-secondary posts-filter-btn">Tags ▾</button>
           <div className="view-toggle">
             <button
               className={`view-btn ${view === "list" ? "active" : ""}`}
@@ -84,7 +111,7 @@ export default function PostsPage() {
 
       {/* ── Content ── */}
       {view === "calendar" ? (
-        <CalendarView />
+        <CalendarView selectedChannels={selectedChannels} />
       ) : (
         <div className="posts-content">
           <div className="posts-empty">

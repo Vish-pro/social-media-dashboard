@@ -3,17 +3,23 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/authOptions'
 import { prisma } from '@/lib/prisma'
 
-export async function GET() {
+export async function GET(req: Request) {
   const session = await getServerSession(authOptions)
   if (!session?.user) {
     return NextResponse.json({ providers: [] })
   }
 
-  const user = session.user as { id: string }
-  const accounts = await prisma.account.findMany({
-    where: { userId: user.id },
-    select: { provider: true },
+  const url = new URL(req.url);
+  const workspaceId = url.searchParams.get("workspaceId");
+
+  if (!workspaceId) {
+    return NextResponse.json({ providers: [] })
+  }
+
+  const accounts = await prisma.socialAccount.findMany({
+    where: { workspaceId: workspaceId },
+    select: { platform: true },
   })
 
-  return NextResponse.json({ providers: accounts.map((a) => a.provider) })
+  return NextResponse.json({ providers: accounts.map((a) => a.platform) })
 }

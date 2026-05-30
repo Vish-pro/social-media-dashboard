@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useSession, signIn } from "next-auth/react";
 import StatCard from "@/components/StatCard";
 import ChartCard from "@/components/ChartCard";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import "./page-styles.css";
 
 interface Channel {
@@ -35,15 +36,17 @@ function fmt(n: number): string {
 
 export default function Dashboard() {
   const { status } = useSession();
+  const { activeWorkspaceId } = useWorkspace();
   const [stats, setStats] = useState<YTStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [connectedProviders, setConnectedProviders] = useState<string[]>([]);
 
   useEffect(() => {
-    if (status === "authenticated") {
+    if (status === "authenticated" && activeWorkspaceId) {
+      setLoading(true);
       Promise.all([
-        fetch("/api/youtube/stats").then((r) => r.json()),
-        fetch("/api/auth/connected").then((r) => r.json()),
+        fetch(`/api/youtube/stats?workspaceId=${activeWorkspaceId}`).then((r) => r.json()),
+        fetch(`/api/auth/connected?workspaceId=${activeWorkspaceId}`).then((r) => r.json()),
       ])
         .then(([ytData, connData]) => {
           setStats(ytData);
@@ -54,7 +57,7 @@ export default function Dashboard() {
     } else if (status !== "loading") {
       setLoading(false);
     }
-  }, [status]);
+  }, [status, activeWorkspaceId]);
 
   const ch = stats?.channel;
   const placeholder = "—";
@@ -129,8 +132,12 @@ export default function Dashboard() {
               ) : (
                 <button
                   className="btn-primary account-connect-btn"
-                  onClick={() => signIn("google")}
-                  disabled={loading}
+                  onClick={() => {
+                    if (activeWorkspaceId) {
+                      window.location.href = `/api/youtube/connect?workspaceId=${activeWorkspaceId}`;
+                    }
+                  }}
+                  disabled={loading || !activeWorkspaceId}
                 >
                   Connect
                 </button>

@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import "./Composer.css";
 
 interface Channel {
@@ -12,6 +13,7 @@ interface Channel {
 
 export default function NewPost() {
   const { data: session } = useSession();
+  const { activeWorkspaceId } = useWorkspace();
   const [content, setContent] = useState("");
   const [channels, setChannels] = useState<Channel[]>([]);
   const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
@@ -23,7 +25,9 @@ export default function NewPost() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    fetch("/api/youtube/stats")
+    if (!activeWorkspaceId) return;
+    
+    fetch(`/api/youtube/stats?workspaceId=${activeWorkspaceId}`)
       .then((r) => r.json())
       .then((data) => {
         if (data.connected && data.channel) {
@@ -34,10 +38,13 @@ export default function NewPost() {
           };
           setChannels([ch]);
           setSelectedChannels(["youtube"]);
+        } else {
+          setChannels([]);
+          setSelectedChannels([]);
         }
       })
       .catch(() => {});
-  }, []);
+  }, [activeWorkspaceId]);
 
   const toggleChannel = (id: string) =>
     setSelectedChannels((prev) =>
@@ -60,14 +67,22 @@ export default function NewPost() {
   const handleShare = async () => {
     setSubmitting(true);
     try {
-      const res = await fetch("/api/youtube/upload", {
+      if (!activeWorkspaceId) {
+        alert("Please select a workspace");
+        setSubmitting(false);
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("title", content.slice(0, 100));
+      formData.append("description", content);
+      if (mediaFiles[0]) {
+        formData.append("file", mediaFiles[0]);
+      }
+
+      const res = await fetch(`/api/youtube/upload?workspaceId=${activeWorkspaceId}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: content.slice(0, 100),
-          description: content,
-          videoUrl: mediaPreviews[0] ?? "",
-        }),
+        body: formData,
       });
       const data = await res.json();
       if (res.ok) {

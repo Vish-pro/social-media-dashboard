@@ -6,26 +6,27 @@ This plan takes the application from basic setup to a live, multi-workspace depl
 
 ## Phase 1: Local Setup & API Validation
 - [x] **Initialize the Repository**: Set up Next.js local project environment.
-- [ ] **Endpoint Testing**: Set up Google Cloud Console and get YouTube API credentials.
-- [x] **Database Provisioning**: Set up local SQLite database (`dev.db`).
+- [x] **Endpoint Testing**: Set up Google Cloud Console and get YouTube API credentials.
+- [x] **Database Provisioning**: Set up Neon PostgreSQL database.
 
 ## Phase 2: Database Architecture & Workspaces
-- [ ] **Design the Schema**: Create core relational tables using an ORM (Prisma/Drizzle):
-  - `Users`, `Workspaces`, `Workspace_Members`, `Social_Accounts`, `Posts`.
-- [ ] **Authentication**: Implement secure login system (NextAuth/Auth.js or Supabase Auth).
+- [x] **Design the Schema**: Core relational tables — Users, Workspaces, WorkspaceMembers, SocialAccounts, PostGroups, Posts.
+- [x] **Authentication**: Google OAuth via NextAuth v4 + PrismaAdapter. Sign-in page, session gate, sign-out.
+- [x] **Workspace Switcher**: Custom dropdown in Sidebar with initials avatar, active state, inline create, settings link.
+- [x] **Workspace Settings Page**: Rename, invite by email (admin-only), member list with roles, remove member, type-to-confirm delete.
+- [x] **Workspace APIs**: GET/POST /api/workspaces, PATCH/DELETE /api/workspaces/[id], GET/POST/DELETE /api/workspaces/[id]/members.
 
 ## Phase 3: The Core Composer & UI
-- [ ] **Build the Shell**: Create persistent sidebar navigation and Workspace Switcher dropdown.
-- [ ] **The Composer Interface**: Build unified text area and media uploader.
-- [ ] **Notification Publishing**: Implement logic to toggle between Auto-Publish and Mobile Notification (for Reels with music).
-- [ ] **Drafts & Approvals UI**: Create view for Contributor "Pending Approval" and Admin "Approve/Reject".
+- [ ] **Post Composer**: Unified text area + media uploader + platform toggles + schedule picker.
+- [ ] **Drafts & Approvals UI**: Contributor "Pending Approval" and Admin "Approve/Reject" views.
 
 ## Phase 4: API Integration & Publishing Engine
-- [ ] **OAuth Flow**: Build "Connect YouTube" logic using Google OAuth to securely store refresh/access tokens.
-- [ ] **The Publishing Function**: Write backend API route to upload video using `googleapis` (YouTube Data API v3).
-- [ ] **The Scheduler**: Implement cron job (Vercel Cron/Upstash) to trigger publishing for scheduled YouTube videos.
+- [ ] **YouTube OAuth Flow**: "Connect YouTube" using Google OAuth, store refresh/access tokens.
+- [ ] **Publishing Function**: Backend API route to upload video via googleapis (YouTube Data API v3).
+- [ ] **Scheduler**: Cron job to trigger publishing for scheduled YouTube videos.
 
 ## Phase 5: The Shared Inbox & Deployment
-- [ ] **Webhook Integration**: Configure Meta Webhooks to send HTTP POST for comments/DMs.
-- [ ] **Inbox UI**: Build three-pane interface to read, assign, and reply to webhooks.
-- [ ] **Vercel Deployment**: Deploy live application with production environment variables.
+- [ ] **Webhook Integration**: Configure Meta Webhooks for comments/DMs.
+- [ ] **Inbox UI**: Three-pane interface to read, assign, and reply.
+- [ ] **Vercel Deployment**: Deploy with production environment variables.
+

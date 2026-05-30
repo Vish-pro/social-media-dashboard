@@ -1,22 +1,199 @@
-.workspace-switcher {
-  padding: 16px 24px 0 24px;
+/* ── Workspace Switcher ─────────────────────────────── */
+
+.ws-trigger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 10px 12px;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--text-primary);
+  transition: border-color 0.2s, background 0.2s;
+  text-align: left;
 }
 
-.workspace-select {
-  width: 100%;
-  background-color: var(--bg-tertiary);
-  color: var(--text-primary);
+.ws-trigger:hover:not(:disabled) {
+  border-color: var(--accent-primary);
+  background: rgba(99, 102, 241, 0.05);
+}
+
+.ws-trigger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ws-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ws-avatar-sm {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  font-size: 0.6875rem;
+}
+
+.ws-name {
+  flex: 1;
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ws-chevron {
+  font-size: 0.625rem;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+/* Dropdown */
+.ws-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: var(--bg-secondary);
   border: 1px solid var(--border-color);
-  padding: 8px 12px;
   border-radius: var(--border-radius);
-  font-weight: 500;
-  cursor: pointer;
-  outline: none;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  z-index: 100;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: dropdown-appear 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes dropdown-appear {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.ws-dropdown-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 4px 8px 6px;
+}
+
+.ws-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--text-primary);
   font-family: inherit;
   font-size: 0.875rem;
+  cursor: pointer;
+  transition: background 0.15s;
+  text-align: left;
+}
+
+.ws-option:hover {
+  background: var(--bg-tertiary);
+}
+
+.ws-option-active {
+  background: rgba(99, 102, 241, 0.12);
+  color: var(--accent-hover);
+  font-weight: 600;
+}
+
+.ws-check {
+  margin-left: auto;
+  color: var(--accent-primary);
+  font-size: 0.75rem;
+}
+
+.ws-divider {
+  height: 1px;
+  background: var(--border-color);
+  margin: 6px 0;
+}
+
+/* Inline create form */
+.ws-create-form {
+  display: flex;
+  gap: 6px;
+  padding: 4px 2px;
+}
+
+.ws-create-input {
+  flex: 1;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 7px 10px;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  outline: none;
   transition: border-color 0.2s;
 }
 
-.workspace-select:focus {
+.ws-create-input:focus {
   border-color: var(--accent-primary);
+}
+
+.ws-create-btn {
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+  transition: opacity 0.15s;
+}
+
+.ws-create-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ws-create-error {
+  font-size: 0.75rem;
+  color: var(--danger);
+  padding: 0 4px 4px;
+}
+
+.ws-settings-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  transition: background 0.15s, color 0.15s;
+}
+
+.ws-settings-link:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
 }
