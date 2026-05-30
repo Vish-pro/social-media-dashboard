@@ -181,7 +181,7 @@ export default function PostsPage() {
       {view === "calendar" ? (
         <CalendarView selectedChannels={selectedChannels} />
       ) : (
-        <div className="posts-content" style={{ display: "flex", flexDirection: "column", gap: "16px", padding: "20px 0" }}>
+        <div className="posts-content" style={{ display: "flex", flexDirection: "column", gap: "16px", padding: "20px 0", width: "100%", alignItems: "stretch", justifyContent: "flex-start" }}>
           {loading ? (
             <div style={{ textAlign: "center", padding: "40px", color: "var(--text-muted)" }}>Loading posts...</div>
           ) : posts.length > 0 ? (
@@ -190,13 +190,14 @@ export default function PostsPage() {
               border: "1px solid var(--border-color)",
               borderRadius: "12px",
               overflow: "hidden",
-              boxShadow: "0 10px 30px rgba(0, 0, 0, 0.2)"
+              boxShadow: "0 10px 30px rgba(0, 0, 0, 0.2)",
+              width: "100%"
             }}>
               {/* Table Header */}
               <div style={{
                 display: "grid",
-                gridTemplateColumns: "1.2fr 2fr 1fr 0.7fr 0.9fr 0.7fr 0.9fr 0.8fr",
-                padding: "10px 16px",
+                gridTemplateColumns: "1.2fr 2fr 1fr 0.8fr 1fr 0.8fr 1fr 1fr",
+                padding: "12px 16px",
                 background: "var(--bg-tertiary)",
                 borderBottom: "1px solid var(--border-color)",
                 fontSize: "0.75rem",
@@ -205,14 +206,14 @@ export default function PostsPage() {
                 textTransform: "uppercase",
                 letterSpacing: "0.05em"
               }}>
-                <span>Date & Time</span>
-                <span>Post Content</span>
-                <span>Channel</span>
-                <span style={{ textAlign: "center" }}>Likes</span>
-                <span style={{ textAlign: "center" }}>Comments</span>
-                <span style={{ textAlign: "center" }}>Views</span>
-                <span style={{ textAlign: "center" }}>Eng. Rate</span>
-                <span style={{ textAlign: "right" }}>Live Link</span>
+                <span>🕒 Date & Time</span>
+                <span>✍️ Post Content</span>
+                <span>🔗 Channel</span>
+                <span style={{ textAlign: "center" }}>👍 Likes</span>
+                <span style={{ textAlign: "center" }}>💬 Comments</span>
+                <span style={{ textAlign: "center" }}>👁 Views</span>
+                <span style={{ textAlign: "center" }}>📈 Eng. Rate</span>
+                <span style={{ textAlign: "right" }}>🚀 Live Link</span>
               </div>
 
               {/* Table Rows */}
@@ -228,6 +229,12 @@ export default function PostsPage() {
                 const likes = post.status === "PUBLISHED" ? Math.floor(views * (0.06 + (hash % 8) / 100)) : 0;
                 const comments = post.status === "PUBLISHED" ? Math.floor(likes * (0.12 + (hash % 6) / 50)) : 0;
                 const er = post.status === "PUBLISHED" ? ((likes + comments) / views * 100).toFixed(1) + "%" : "0.0%";
+
+                // Metrics placeholder logic (use em-dash when not live/published)
+                const viewsText = post.status === "PUBLISHED" ? views.toString() : "—";
+                const likesText = post.status === "PUBLISHED" ? likes.toString() : "—";
+                const commentsText = post.status === "PUBLISHED" ? comments.toString() : "—";
+                const erText = post.status === "PUBLISHED" ? er : "—";
 
                 // Retrieve live post URL
                 let liveUrl = "";
@@ -248,8 +255,8 @@ export default function PostsPage() {
                     key={post.id}
                     style={{
                       display: "grid",
-                      gridTemplateColumns: "1.2fr 2fr 1fr 0.7fr 0.9fr 0.7fr 0.9fr 0.8fr",
-                      padding: "10px 16px",
+                      gridTemplateColumns: "1.2fr 2fr 1fr 0.8fr 1fr 0.8fr 1fr 1fr",
+                      padding: "12px 16px",
                       fontSize: "0.85rem",
                       alignItems: "center",
                       color: "var(--text-primary)",
@@ -258,8 +265,8 @@ export default function PostsPage() {
                     }}
                   >
                     {/* Date & Time */}
-                    <span style={{ color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: "6px" }}>
-                      🕒 {new Date(post.createdAt).toLocaleDateString()} {new Date(post.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    <span style={{ color: "var(--text-secondary)" }}>
+                      {new Date(post.createdAt).toLocaleDateString()} {new Date(post.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
 
                     {/* Post Content */}
@@ -294,10 +301,10 @@ export default function PostsPage() {
                     </div>
 
                     {/* Metrics */}
-                    <span style={{ textAlign: "center", fontWeight: 600 }}>{likes}</span>
-                    <span style={{ textAlign: "center", fontWeight: 600 }}>{comments}</span>
-                    <span style={{ textAlign: "center", fontWeight: 600 }}>{views}</span>
-                    <span style={{ textAlign: "center", color: "var(--accent-hover)", fontWeight: 700 }}>{er}</span>
+                    <span style={{ textAlign: "center", fontWeight: 600, color: post.status === "PUBLISHED" ? "var(--text-primary)" : "var(--text-muted)" }}>{likesText}</span>
+                    <span style={{ textAlign: "center", fontWeight: 600, color: post.status === "PUBLISHED" ? "var(--text-primary)" : "var(--text-muted)" }}>{commentsText}</span>
+                    <span style={{ textAlign: "center", fontWeight: 600, color: post.status === "PUBLISHED" ? "var(--text-primary)" : "var(--text-muted)" }}>{viewsText}</span>
+                    <span style={{ textAlign: "center", color: post.status === "PUBLISHED" ? "var(--accent-hover)" : "var(--text-muted)", fontWeight: 700 }}>{erText}</span>
 
                     {/* Action Link */}
                     <span style={{ textAlign: "right" }}>
