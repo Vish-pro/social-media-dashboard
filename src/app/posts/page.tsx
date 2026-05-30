@@ -185,8 +185,6 @@ export default function PostsPage() {
           {loading ? (
             <div style={{ textAlign: "center", padding: "40px", color: "var(--text-muted)" }}>Loading posts...</div>
           ) : posts.length > 0 ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-          ) : posts.length > 0 ? (
             <div style={{
               background: "var(--bg-secondary)",
               border: "1px solid var(--border-color)",
@@ -330,30 +328,6 @@ export default function PostsPage() {
                 );
               })}
             </div>
-          ) : (
-            <div className="posts-empty">
-              <div className="posts-empty-illustration">
-                {[0, 1, 2].map((i) => (
-                  <div key={i} className="empty-card">
-                    <div className="empty-card-line" />
-                    <div className="empty-card-line short" />
-                    <div className="empty-card-thumb" />
-                  </div>
-                ))}
-              </div>
-              <h3 className="posts-empty-title">{msg.title}</h3>
-              <p className="posts-empty-subtitle">{msg.subtitle}</p>
-              <Link href="/posts/new" className="btn-primary" style={{ marginTop: "8px" }}>
-                + New Post
-              </Link>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
           ) : (
             <div className="posts-empty">
               <div className="posts-empty-illustration">
