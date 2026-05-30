@@ -174,14 +174,26 @@ export default function CalendarView({ selectedChannels }: CalendarViewProps) {
           </div>
 
           {/* Day columns */}
-          {days.map((day, di) => {
-            const isToday = sameDay(day, today);
-            const dayPosts = posts.filter((p) => {
-              if (!p.scheduledFor) return false;
-              return sameDay(new Date(p.scheduledFor), day);
-            });
+          {(() => {
+            const postsByDay = new Map<string, Post[]>();
+            for (const p of posts) {
+              if (!p.scheduledFor) continue;
+              const pd = new Date(p.scheduledFor);
+              const key = `${pd.getFullYear()}-${pd.getMonth()}-${pd.getDate()}`;
+              let arr = postsByDay.get(key);
+              if (!arr) {
+                arr = [];
+                postsByDay.set(key, arr);
+              }
+              arr.push(p);
+            }
 
-            return (
+            return days.map((day, di) => {
+              const isToday = sameDay(day, today);
+              const key = `${day.getFullYear()}-${day.getMonth()}-${day.getDate()}`;
+              const dayPosts = postsByDay.get(key) || [];
+
+              return (
               <div key={di} className={`cal-day-col ${isToday ? "today-col" : ""}`}>
                 {/* Hour grid lines */}
                 {HOURS.map((h) => (
@@ -220,8 +232,9 @@ export default function CalendarView({ selectedChannels }: CalendarViewProps) {
                   );
                 })}
               </div>
-            );
-          })}
+              );
+            });
+          })()}
         </div>
       </div>
 
