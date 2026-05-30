@@ -22,22 +22,29 @@ export default function NewPost() {
   const [createAnother, setCreateAnother] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [scheduleType, setScheduleType] = useState<"now" | "schedule">("now");
+  const [scheduledDate, setScheduledDate] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (!activeWorkspaceId) return;
+    if (!activeWorkspaceId) {
+      setChannels([]);
+      setSelectedChannels([]);
+      return;
+    }
     
-    fetch(`/api/youtube/stats?workspaceId=${activeWorkspaceId}`)
+    fetch(`/api/channels?workspaceId=${activeWorkspaceId}`)
       .then((r) => r.json())
       .then((data) => {
-        if (data.connected && data.channel) {
-          const ch: Channel = {
-            id: "youtube",
-            name: data.channel.name,
-            thumbnail: data.channel.thumbnail,
-          };
-          setChannels([ch]);
-          setSelectedChannels(["youtube"]);
+        if (data.channels && data.channels.length > 0) {
+          const formatted = data.channels.map((c: any) => ({
+            id: c.id,
+            name: c.accountName,
+            thumbnail: c.image,
+            platform: c.platform,
+          }));
+          setChannels(formatted);
+          setSelectedChannels(formatted.map((c: any) => c.id));
         } else {
           setChannels([]);
           setSelectedChannels([]);
@@ -64,7 +71,7 @@ export default function NewPost() {
     setMediaFiles((p) => p.filter((_, j) => j !== i));
   };
 
-  const handleShare = async () => {
+  const handleShare = async (isDraft: boolean = false) => {
     setSubmitting(true);
     try {
       if (!activeWorkspaceId) {
@@ -73,30 +80,46 @@ export default function NewPost() {
         return;
       }
 
+      if (selectedChannels.length === 0) {
+        alert("Please select at least one channel");
+        setSubmitting(false);
+        return;
+      }
+
       const formData = new FormData();
-      formData.append("title", content.slice(0, 100));
-      formData.append("description", content);
+      formData.append("content", content);
+      formData.append("workspaceId", activeWorkspaceId);
+      formData.append("channelIds", JSON.stringify(selectedChannels));
+      formData.append("status", isDraft ? "DRAFT" : "PUBLISHED");
+      
+      if (scheduleType === "schedule" && scheduledDate) {
+        formData.append("scheduledFor", scheduledDate);
+      }
+
       if (mediaFiles[0]) {
         formData.append("file", mediaFiles[0]);
       }
 
-      const res = await fetch(`/api/youtube/upload?workspaceId=${activeWorkspaceId}`, {
+      const res = await fetch(`/api/posts`, {
         method: "POST",
         body: formData,
       });
       const data = await res.json();
       if (res.ok) {
-        if (!createAnother) window.location.href = "/posts";
-        else {
+        if (!createAnother) {
+          window.location.href = "/posts";
+        } else {
           setContent("");
           setMediaFiles([]);
           setMediaPreviews([]);
+          setScheduledDate("");
+          setScheduleType("now");
         }
       } else {
         alert("Error: " + data.error);
       }
     } catch {
-      alert("Failed to post.");
+      alert("Failed to save post.");
     } finally {
       setSubmitting(false);
     }
@@ -285,19 +308,44 @@ export default function NewPost() {
         <div className="footer-right">
           <div className="schedule-select">
             <span>📅</span>
-            <select>
-              <option>Next Available</option>
-              <option>Schedule for later</option>
-              <option>Share now</option>
+            <select value={scheduleType} onChange={(e) => setScheduleType(e.target.value as any)}>
+              <option value="now">Share now</option>
+              <option value="schedule">Schedule for later</option>
             </select>
+            {scheduleType === "schedule" && (
+              <input
+                type="datetime-local"
+                value={scheduledDate}
+                onChange={(e) => setScheduledDate(e.target.value)}
+                className="schedule-date-input"
+                required
+                style={{
+                  marginLeft: "10px",
+                  padding: "6px 12px",
+                  borderRadius: "6px",
+                  border: "1px solid var(--border)",
+                  background: "var(--bg-card)",
+                  color: "var(--text)",
+                  fontFamily: "inherit"
+                }}
+              />
+            )}
           </div>
           <button
+            className="btn-secondary draft-btn"
+            onClick={() => handleShare(true)}
+            disabled={submitting || !content.trim()}
+            style={{ marginRight: "8px", padding: "10px 18px" }}
+          >
+            Save as Draft
+          </button>
+          <button
             className="btn-primary share-btn"
-            onClick={handleShare}
+            onClick={() => handleShare(false)}
             disabled={submitting || !content.trim()}
             title={!content.trim() ? "Write some content to share" : ""}
           >
-            {submitting ? "Posting…" : "Share Now →"}
+            {submitting ? "Processing…" : scheduleType === "schedule" ? "Schedule Post 📅" : "Publish Post 🚀"}
           </button>
         </div>
       </div>

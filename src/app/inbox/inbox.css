@@ -1,0 +1,330 @@
+.inbox-page {
+  display: flex;
+  height: calc(100vh - 100px);
+  margin: -24px;
+  background: var(--bg);
+  border-radius: 16px;
+  overflow: hidden;
+  font-family: inherit;
+  color: var(--text);
+}
+
+/* ── Pane 1: Conversations List ── */
+.inbox-sidebar {
+  width: 320px;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-card);
+}
+
+.inbox-sidebar-header {
+  padding: 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.inbox-sidebar-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.inbox-search {
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.inbox-search-input {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+}
+
+.inbox-threads-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.inbox-thread-item {
+  width: 100%;
+  display: flex;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  align-items: center;
+  gap: 12px;
+}
+
+.inbox-thread-item:hover {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.inbox-thread-item.active {
+  background: var(--accent-dim);
+  border-left: 3px solid var(--accent);
+}
+
+.thread-avatar-container {
+  position: relative;
+}
+
+.thread-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--accent-dim);
+}
+
+.thread-platform-badge {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+}
+
+.thread-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.thread-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4px;
+}
+
+.thread-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.thread-time {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.thread-snippet {
+  font-size: 13px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Pane 2: Message Center ── */
+.inbox-chat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+.inbox-chat-header {
+  padding: 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  background: var(--bg-card);
+  gap: 12px;
+}
+
+.active-chat-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+
+.active-chat-name {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.active-chat-status {
+  font-size: 12px;
+  color: var(--success);
+}
+
+.inbox-messages-container {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.message-bubble-wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+.message-bubble-wrapper.incoming {
+  align-items: flex-start;
+}
+
+.message-bubble-wrapper.outgoing {
+  align-items: flex-end;
+}
+
+.message-bubble {
+  max-width: 60%;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.message-bubble-wrapper.incoming .message-bubble {
+  background: var(--bg-card);
+  color: var(--text);
+  border-bottom-left-radius: 2px;
+  border: 1px solid var(--border);
+}
+
+.message-bubble-wrapper.outgoing .message-bubble {
+  background: var(--accent);
+  color: #fff;
+  border-bottom-right-radius: 2px;
+}
+
+.message-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  padding: 0 4px;
+}
+
+.inbox-chat-input-area {
+  padding: 20px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-card);
+}
+
+.inbox-compose-row {
+  display: flex;
+  gap: 12px;
+}
+
+.inbox-compose-textarea {
+  flex: 1;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  resize: none;
+  height: 44px;
+}
+
+.inbox-send-btn {
+  padding: 0 20px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.2s;
+}
+
+.inbox-send-btn:hover {
+  filter: brightness(1.1);
+}
+
+/* ── Pane 3: Customer Context ── */
+.inbox-details {
+  width: 280px;
+  border-left: 1px solid var(--border);
+  background: var(--bg-card);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 30px 20px;
+  text-align: center;
+}
+
+.details-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  margin-bottom: 16px;
+  border: 3px solid var(--accent-dim);
+}
+
+.details-name {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 4px 0;
+}
+
+.details-handle {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 24px;
+}
+
+.details-info-section {
+  width: 100%;
+  text-align: left;
+  border-top: 1px solid var(--border);
+  padding-top: 20px;
+}
+
+.details-info-title {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.details-info-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.details-info-label {
+  color: var(--text-muted);
+}
+
+.details-info-val {
+  font-weight: 500;
+}
+
+.inbox-empty-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
