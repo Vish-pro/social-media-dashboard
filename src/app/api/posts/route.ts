@@ -50,6 +50,7 @@ export async function GET(req: Request) {
 
   const posts = await prisma.post.findMany({
     where,
+    include: { socialAccount: true },
     orderBy: { scheduledFor: "asc" },
   });
 
@@ -83,6 +84,19 @@ export async function POST(req: Request) {
         channelIds = JSON.parse(channelsRaw);
       }
 
+      const platformsRaw = formData.get("platforms") as string;
+      if (platformsRaw && channelIds.length === 0) {
+        const platforms = JSON.parse(platformsRaw) as string[];
+        const dbAccounts = await prisma.socialAccount.findMany({
+          where: {
+            workspaceId,
+            platform: { in: platforms }
+          },
+          select: { id: true }
+        });
+        channelIds = dbAccounts.map(a => a.id);
+      }
+
       const file = formData.get("file") as File;
       if (file && file.size > 0) {
         const filename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
@@ -104,6 +118,17 @@ export async function POST(req: Request) {
       status = json.status || "DRAFT";
       channelIds = json.channelIds || [];
       mediaUrls = json.mediaUrls || [];
+
+      if (json.platforms && channelIds.length === 0) {
+        const dbAccounts = await prisma.socialAccount.findMany({
+          where: {
+            workspaceId,
+            platform: { in: json.platforms }
+          },
+          select: { id: true }
+        });
+        channelIds = dbAccounts.map(a => a.id);
+      }
     }
 
     if (!workspaceId || !content) {
@@ -130,7 +155,7 @@ export async function POST(req: Request) {
       if (role === "CONTRIBUTOR") {
         finalStatus = "PENDING_APPROVAL";
       } else {
-        finalStatus = scheduledFor ? "SCHEDULED" : "APPROVED";
+        finalStatus = status === "PUBLISHED" ? "PUBLISHED" : (scheduledFor ? "SCHEDULED" : "APPROVED");
       }
     }
 
@@ -150,12 +175,22 @@ export async function POST(req: Request) {
       const posts = [];
       if (channelIds && channelIds.length > 0) {
         for (const channelId of channelIds) {
+          const account = await tx.socialAccount.findUnique({
+            where: { id: channelId },
+            select: { platform: true }
+          });
+
+          const isQueuePlatform = account?.platform.toLowerCase() === "youtube";
+          const postStatus = isQueuePlatform
+            ? (finalStatus === "PUBLISHED" ? "APPROVED" : finalStatus)
+            : finalStatus;
+
           const post = await tx.post.create({
             data: {
               workspaceId,
               socialAccountId: channelId,
               postGroupId: postGroup.id,
-              status: finalStatus,
+              status: postStatus,
               scheduledFor: scheduledDate,
               content: content,
               mediaUrls: mediaUrls,

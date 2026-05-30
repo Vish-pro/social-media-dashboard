@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useSession, signIn } from "next-auth/react";
+// Auth bypassed for demo mode
 import StatCard from "@/components/StatCard";
 import ChartCard from "@/components/ChartCard";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
@@ -35,29 +35,35 @@ function fmt(n: number): string {
 }
 
 export default function Dashboard() {
-  const { status } = useSession();
   const { activeWorkspaceId } = useWorkspace();
   const [stats, setStats] = useState<YTStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [connectedProviders, setConnectedProviders] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  // Read connections from localStorage (set by /connections page)
+  const [lsConnections, setLsConnections] = useState<Record<string, any>>({});
 
   useEffect(() => {
-    if (status === "authenticated" && activeWorkspaceId) {
-      setLoading(true);
-      Promise.all([
-        fetch(`/api/youtube/stats?workspaceId=${activeWorkspaceId}`).then((r) => r.json()),
-        fetch(`/api/auth/connected?workspaceId=${activeWorkspaceId}`).then((r) => r.json()),
-      ])
-        .then(([ytData, connData]) => {
-          setStats(ytData);
-          setConnectedProviders(connData.providers ?? []);
-          setLoading(false);
-        })
-        .catch(() => setLoading(false));
-    } else if (status !== "loading") {
-      setLoading(false);
+    const saved = localStorage.getItem("socialpulse_connections");
+    if (saved) {
+      try { setLsConnections(JSON.parse(saved)); } catch {}
     }
-  }, [status, activeWorkspaceId]);
+  }, []);
+
+  useEffect(() => {
+    if (!activeWorkspaceId) return;
+
+    setLoading(true);
+    fetch(`/api/youtube/stats?workspaceId=${activeWorkspaceId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.connected && data.channel) {
+          setStats(data);
+        } else {
+          setStats(null);
+        }
+      })
+      .catch((err) => console.error("Error loading YouTube stats:", err))
+      .finally(() => setLoading(false));
+  }, [activeWorkspaceId]);
 
   const ch = stats?.channel;
   const placeholder = "—";
@@ -75,37 +81,21 @@ export default function Dashboard() {
       </div>
 
       <div className="dashboard-grid">
-        <StatCard
-          title="Subscribers"
-          value={loading ? "..." : ch ? fmt(ch.subscriberCount) : placeholder}
-          icon="👥"
-        />
-        <StatCard
-          title="Total Views"
-          value={loading ? "..." : ch ? fmt(ch.viewCount) : placeholder}
-          icon="🔥"
-        />
-        <StatCard
-          title="Videos"
-          value={loading ? "..." : ch ? ch.videoCount.toString() : placeholder}
-          icon="🎬"
-        />
-        <StatCard
-          title="Comments"
-          value={loading ? "..." : ch ? fmt(ch.commentCount) : placeholder}
-          icon="💬"
-        />
+        <StatCard title="Subscribers" value={loading ? "..." : ch ? fmt(ch.subscriberCount) : placeholder} icon="👥" />
+        <StatCard title="Total Views"  value={loading ? "..." : ch ? fmt(ch.viewCount)        : placeholder} icon="🔥" />
+        <StatCard title="Videos"       value={loading ? "..." : ch ? ch.videoCount.toString() : placeholder} icon="🎬" />
+        <StatCard title="Comments"     value={loading ? "..." : ch ? fmt(ch.commentCount)     : placeholder} icon="💬" />
       </div>
 
       <div className="dashboard-grid-large">
-        <ChartCard
-          title="Channel Analytics"
-          data={loading ? undefined : (stats?.chartData ?? [])}
-        />
+        <ChartCard title="Channel Analytics" data={loading ? undefined : (stats?.chartData ?? [])} />
 
         <div className="connected-accounts-card">
           <div className="chart-header">
             <h3 className="chart-title">Connected Accounts</h3>
+            <a href="/connections" style={{ fontSize: "0.8rem", color: "var(--accent)", textDecoration: "none" }}>
+              Manage →
+            </a>
           </div>
 
           <div className="accounts-list">
@@ -121,9 +111,7 @@ export default function Dashboard() {
                 ) : (
                   <>
                     <span className="account-name">YouTube</span>
-                    <span className="account-meta">
-                      {loading ? "Loading..." : "Not connected"}
-                    </span>
+                    <span className="account-meta">{loading ? "Loading..." : "Not connected"}</span>
                   </>
                 )}
               </div>
@@ -144,52 +132,62 @@ export default function Dashboard() {
               )}
             </div>
 
-            {/* Instagram */}
+            {/* Bluesky */}
             <div className="account-item">
-              <div className="account-platform-icon" style={{ background: "linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)", color: "#fff" }}>📷</div>
+              <div className="account-platform-icon" style={{ background: "#0085ff", color: "#fff" }}>🦋</div>
               <div className="account-info">
-                <span className="account-name">Instagram</span>
+                <span className="account-name">Bluesky</span>
                 <span className="account-meta">
-                  {connectedProviders.includes("instagram") ? "Connected" : "Not connected"}
+                  {lsConnections.bluesky ? `@${lsConnections.bluesky.handle}` : "Not connected"}
                 </span>
               </div>
-              {connectedProviders.includes("instagram") ? (
+              {lsConnections.bluesky ? (
                 <span className="account-badge connected">✓ Connected</span>
               ) : (
-                <button
-                  className="btn-primary account-connect-btn"
-                  onClick={() => signIn("instagram")}
-                  disabled={loading}
-                >
+                <a href="/connections" className="btn-primary account-connect-btn" style={{ textDecoration: "none", textAlign: "center" }}>
                   Connect
-                </button>
+                </a>
               )}
             </div>
 
-            {/* Threads */}
+            {/* LinkedIn */}
             <div className="account-item">
-              <div className="account-platform-icon" style={{ background: "#000", color: "#fff" }}>𝕋</div>
+              <div className="account-platform-icon" style={{ background: "#0077b5", color: "#fff", fontWeight: 700 }}>in</div>
               <div className="account-info">
-                <span className="account-name">Threads</span>
+                <span className="account-name">LinkedIn</span>
                 <span className="account-meta">
-                  {connectedProviders.includes("threads") ? "Connected" : "Not connected"}
+                  {lsConnections.linkedin ? lsConnections.linkedin.name : "Not connected"}
                 </span>
               </div>
-              {connectedProviders.includes("threads") ? (
+              {lsConnections.linkedin ? (
                 <span className="account-badge connected">✓ Connected</span>
               ) : (
-                <button
-                  className="btn-primary account-connect-btn"
-                  onClick={() => signIn("threads")}
-                  disabled={loading}
-                >
+                <a href="/connections" className="btn-primary account-connect-btn" style={{ textDecoration: "none", textAlign: "center" }}>
                   Connect
-                </button>
+                </a>
               )}
             </div>
 
-            {/* Future platforms */}
-            {[{ name: "Facebook", icon: "🌐" }, { name: "TikTok", icon: "♪" }].map((p) => (
+            {/* Medium */}
+            <div className="account-item">
+              <div className="account-platform-icon" style={{ background: "#000", color: "#fff", fontWeight: 700, fontSize: "1.1rem" }}>M</div>
+              <div className="account-info">
+                <span className="account-name">Medium</span>
+                <span className="account-meta">
+                  {lsConnections.medium ? `@${lsConnections.medium.username}` : "Not connected"}
+                </span>
+              </div>
+              {lsConnections.medium ? (
+                <span className="account-badge connected">✓ Connected</span>
+              ) : (
+                <a href="/connections" className="btn-primary account-connect-btn" style={{ textDecoration: "none", textAlign: "center" }}>
+                  Connect
+                </a>
+              )}
+            </div>
+
+            {/* Coming soon */}
+            {[{ name: "X / Twitter", icon: "𝕏" }, { name: "Instagram", icon: "📷" }].map((p) => (
               <div key={p.name} className="account-item">
                 <div className="account-platform-icon">{p.icon}</div>
                 <div className="account-info">

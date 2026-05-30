@@ -6,14 +6,15 @@ import { authOptions } from "@/lib/authOptions";
 // GET /api/workspaces/[id]/members — list members of a workspace
 export async function GET(
   _req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const userId = (session.user as any).id;
-    const { id: workspaceId } = params;
+    const resolvedParams = await params;
+    const workspaceId = resolvedParams.id;
 
     // Verify caller is a member
     const membership = await prisma.workspaceMember.findUnique({
@@ -36,14 +37,15 @@ export async function GET(
 // POST /api/workspaces/[id]/members — invite a user by email
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const userId = (session.user as any).id;
-    const { id: workspaceId } = params;
+    const resolvedParams = await params;
+    const workspaceId = resolvedParams.id;
 
     // Only ADMINs can invite
     const membership = await prisma.workspaceMember.findUnique({
@@ -85,14 +87,15 @@ export async function POST(
 // DELETE /api/workspaces/[id]/members — remove a member by userId
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const callerId = (session.user as any).id;
-    const { id: workspaceId } = params;
+    const resolvedParams = await params;
+    const workspaceId = resolvedParams.id;
     const { userId: targetUserId } = await req.json();
 
     const callerMembership = await prisma.workspaceMember.findUnique({
@@ -114,3 +117,4 @@ export async function DELETE(
     return NextResponse.json({ error: "Failed to remove member" }, { status: 500 });
   }
 }
+

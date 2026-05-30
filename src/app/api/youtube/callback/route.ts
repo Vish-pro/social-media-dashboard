@@ -1,17 +1,60 @@
 import { NextResponse } from "next/server";
 import { google } from "googleapis";
 import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/authOptions";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const code = url.searchParams.get("code");
-  const workspaceId = url.searchParams.get("state"); // We passed workspaceId as state
+  const workspaceIdFromUrl = url.searchParams.get("state"); // We passed workspaceId as state
 
-  if (!code || !workspaceId) {
-    return NextResponse.json({ error: "Missing code or workspaceId" }, { status: 400 });
+  if (!code) {
+    return NextResponse.json({ error: "Missing code" }, { status: 400 });
   }
 
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized. Please log in first." }, { status: 401 });
+    }
+    const userId = (session.user as any).id;
+
+    // Validate or find a real workspaceId in the database for this user
+    let finalWorkspaceId = workspaceIdFromUrl;
+    let workspaceExists = false;
+
+    if (finalWorkspaceId && !finalWorkspaceId.startsWith("demo-")) {
+      const ws = await prisma.workspace.findFirst({
+        where: {
+          id: finalWorkspaceId,
+          members: { some: { userId } }
+        }
+      });
+      if (ws) {
+        workspaceExists = true;
+      }
+    }
+
+    if (!workspaceExists) {
+      // Fallback: Find user's first real workspace
+      let userWorkspace = await prisma.workspace.findFirst({
+        where: { members: { some: { userId } } }
+      });
+
+      // If they don't have one, create one
+      if (!userWorkspace) {
+        userWorkspace = await prisma.workspace.create({
+          data: {
+            name: "Personal Workspace",
+            members: { create: { userId, role: "ADMIN" } }
+          }
+        });
+      }
+
+      finalWorkspaceId = userWorkspace.id;
+    }
+
     const oauth2Client = new google.auth.OAuth2(
       process.env.GOOGLE_CLIENT_ID,
       process.env.GOOGLE_CLIENT_SECRET,
@@ -49,7 +92,7 @@ export async function GET(req: Request) {
         accessToken: tokens.access_token!,
         refreshToken: tokens.refresh_token,
         expiresAt: tokens.expiry_date ? Math.floor(tokens.expiry_date / 1000) : null,
-        workspaceId: workspaceId,
+        workspaceId: finalWorkspaceId!,
         accountName: name,
         image: image,
       },
@@ -59,7 +102,7 @@ export async function GET(req: Request) {
         accessToken: tokens.access_token!,
         refreshToken: tokens.refresh_token,
         expiresAt: tokens.expiry_date ? Math.floor(tokens.expiry_date / 1000) : null,
-        workspaceId: workspaceId,
+        workspaceId: finalWorkspaceId!,
         accountName: name,
         image: image,
       },
@@ -72,3 +115,4 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Authentication failed" }, { status: 500 });
   }
 }
+

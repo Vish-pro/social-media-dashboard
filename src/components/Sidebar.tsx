@@ -8,11 +8,12 @@ import "./Sidebar.css";
 import "./Workspace.css";
 
 const NAV_ITEMS = [
-  { href: "/",          icon: "📊", label: "Dashboard"  },
-  { href: "/posts",     icon: "📝", label: "Posts"       },
-  { href: "/analytics", icon: "📈", label: "Analytics"   },
-  { href: "/audience",  icon: "👥", label: "Audience"    },
-  { href: "/inbox",     icon: "📬", label: "Inbox"       },
+  { href: "/",            icon: "📊", label: "Dashboard"  },
+  { href: "/posts",       icon: "📝", label: "Posts"       },
+  { href: "/analytics",  icon: "📈", label: "Analytics"   },
+  { href: "/audience",   icon: "👥", label: "Audience"    },
+  { href: "/inbox",      icon: "📬", label: "Inbox"       },
+  { href: "/connections",icon: "🔗", label: "Connections" },
 ];
 
 export default function Sidebar() {

@@ -13,14 +13,15 @@ async function requireAdmin(workspaceId: string, userId: string) {
 // PATCH /api/workspaces/[id] — rename workspace
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const userId = (session.user as any).id;
-    const { id: workspaceId } = params;
+    const resolvedParams = await params;
+    const workspaceId = resolvedParams.id;
     const admin = await requireAdmin(workspaceId, userId);
     if (!admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
@@ -41,14 +42,15 @@ export async function PATCH(
 // DELETE /api/workspaces/[id] — delete workspace
 export async function DELETE(
   _req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const userId = (session.user as any).id;
-    const { id: workspaceId } = params;
+    const resolvedParams = await params;
+    const workspaceId = resolvedParams.id;
     const admin = await requireAdmin(workspaceId, userId);
     if (!admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
@@ -58,3 +60,4 @@ export async function DELETE(
     return NextResponse.json({ error: "Failed to delete workspace" }, { status: 500 });
   }
 }
+

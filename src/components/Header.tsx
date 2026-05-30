@@ -1,9 +1,13 @@
+"use client";
+
 import React from "react";
-import { useSession, signIn, signOut } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import "./Header.css";
 
 export default function Header() {
-  const { data: session, status } = useSession();
+  const { data: session } = useSession();
+  const user = session?.user;
+
   return (
     <header className="header">
       <div className="header-search">
@@ -16,27 +20,27 @@ export default function Header() {
           <span className="icon">🔔</span>
           <span className="badge">3</span>
         </button>
-        
-        {status === "loading" ? (
-          <div className="user-profile">Loading...</div>
-        ) : session?.user ? (
-          <div className="user-profile" onClick={() => signOut()}>
-            {session.user.image ? (
-              <img src={session.user.image} alt="Avatar" className="avatar" style={{ border: 'none' }} />
+
+        {user && (
+          <div 
+            className="user-profile" 
+            style={{ cursor: "pointer" }} 
+            onClick={() => signOut()}
+            title="Click to Sign Out"
+          >
+            {user.image ? (
+              <img src={user.image} alt={user.name || "User"} className="avatar-img" style={{ width: 32, height: 32, borderRadius: "50%", objectFit: "cover" }} />
             ) : (
-              <div className="avatar">{session.user.name?.[0] || "U"}</div>
+              <div className="avatar">{(user.name || "U")[0]}</div>
             )}
             <div className="user-info">
-              <span className="name">{session.user.name}</span>
-              <span className="role">Sign out</span>
+              <span className="name">{user.name}</span>
+              <span className="role" style={{ color: "var(--accent-hover)", fontSize: "0.75rem" }}>Sign Out</span>
             </div>
           </div>
-        ) : (
-          <button className="btn-primary" onClick={() => signIn("google")}>
-            Sign In
-          </button>
         )}
       </div>
     </header>
   );
 }
+

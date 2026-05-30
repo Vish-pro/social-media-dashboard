@@ -1,5 +1,5 @@
 "use client";
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 
 interface Workspace {
@@ -16,56 +16,64 @@ interface WorkspaceContextType {
   refetch: () => void;
 }
 
+// Demo workspaces — fallback if not authenticated
+const DEMO_WORKSPACES: Workspace[] = [
+  { id: "demo-1", name: "Brand HQ" },
+  { id: "demo-2", name: "Vavvy Clothing" },
+  { id: "demo-3", name: "Personal" },
+];
+
 const WorkspaceContext = createContext<WorkspaceContextType>({
-  workspaces: [],
-  activeWorkspaceId: null,
-  activeWorkspace: null,
+  workspaces: DEMO_WORKSPACES,
+  activeWorkspaceId: DEMO_WORKSPACES[0].id,
+  activeWorkspace: DEMO_WORKSPACES[0],
   setActiveWorkspaceId: () => {},
-  isLoading: true,
+  isLoading: false,
   refetch: () => {},
 });
 
 export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
-  const { status } = useSession();
-  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const { data: session, status } = useSession();
+  const [workspaces, setWorkspaces] = useState<Workspace[]>(DEMO_WORKSPACES);
   const [activeWorkspaceId, setActiveWorkspaceIdState] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const fetchWorkspaces = useCallback(() => {
+  const fetchWorkspaces = async () => {
+    if (status !== "authenticated") {
+      setWorkspaces(DEMO_WORKSPACES);
+      setActiveWorkspaceIdState(DEMO_WORKSPACES[0].id);
+      return;
+    }
     setIsLoading(true);
-    fetch("/api/workspaces")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.workspaces?.length > 0) {
-          setWorkspaces(data.workspaces);
-          const savedId = localStorage.getItem("activeWorkspaceId");
-          setActiveWorkspaceIdState((prev) => {
-            if (prev && data.workspaces.find((w: Workspace) => w.id === prev)) return prev;
-            if (savedId && data.workspaces.find((w: Workspace) => w.id === savedId)) return savedId;
-            return data.workspaces[0].id;
-          });
+    try {
+      const res = await fetch("/api/workspaces");
+      const data = await res.json();
+      if (data.workspaces && data.workspaces.length > 0) {
+        setWorkspaces(data.workspaces);
+        const saved = localStorage.getItem("activeWorkspaceId");
+        if (saved && data.workspaces.some((w: Workspace) => w.id === saved)) {
+          setActiveWorkspaceIdState(saved);
         } else {
-          setWorkspaces([]);
+          setActiveWorkspaceIdState(data.workspaces[0].id);
         }
-        setIsLoading(false);
-      })
-      .catch(() => setIsLoading(false));
-  }, []);
-
-  useEffect(() => {
-    if (status === "authenticated") {
-      fetchWorkspaces();
-    } else if (status !== "loading") {
+      }
+    } catch (e) {
+      console.error("Failed to fetch workspaces:", e);
+    } finally {
       setIsLoading(false);
     }
-  }, [status, fetchWorkspaces]);
+  };
+
+  useEffect(() => {
+    fetchWorkspaces();
+  }, [session, status]);
 
   const handleSetActive = (id: string) => {
     setActiveWorkspaceIdState(id);
     localStorage.setItem("activeWorkspaceId", id);
   };
 
-  const activeWorkspace = workspaces.find((w) => w.id === activeWorkspaceId) ?? null;
+  const activeWorkspace = workspaces.find((w) => w.id === activeWorkspaceId) ?? workspaces[0] ?? null;
 
   return (
     <WorkspaceContext.Provider
@@ -84,3 +92,4 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 }
 
 export const useWorkspace = () => useContext(WorkspaceContext);
+

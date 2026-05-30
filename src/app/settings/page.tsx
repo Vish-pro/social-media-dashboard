@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
-import { useSession } from "next-auth/react";
+// Auth bypassed — demo mode
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import "./settings.css";
 
@@ -12,7 +12,10 @@ interface Member {
 }
 
 export default function SettingsPage() {
-  const { data: session } = useSession();
+  // Demo mode: treat current user as admin
+  const myUserId = "demo-user";
+  const isAdmin = true;
+
   const { activeWorkspace, activeWorkspaceId, refetch, workspaces, setActiveWorkspaceId } =
     useWorkspace();
 
@@ -33,10 +36,6 @@ export default function SettingsPage() {
   // Delete
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(false);
-
-  const myUserId = (session?.user as any)?.id;
-  const myRole = members.find((m) => m.user.id === myUserId)?.role;
-  const isAdmin = myRole === "ADMIN";
 
   const loadMembers = useCallback(() => {
     if (!activeWorkspaceId) return;

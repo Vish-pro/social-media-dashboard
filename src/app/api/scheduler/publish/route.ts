@@ -94,11 +94,11 @@ async function handlePublishQueue() {
             requestBody: {
               snippet: {
                 title: post.content ? post.content.slice(0, 100) : "Social Dashboard Video",
-                description: post.content || "",
+                description: post.content ? post.content.slice(0, 100) : "Social Dashboard Video",
                 categoryId: "22", // People & Blogs
               },
               status: {
-                privacyStatus: "private",
+                privacyStatus: "public",
               },
             },
             media: {
@@ -109,13 +109,14 @@ async function handlePublishQueue() {
 
           const videoId = uploadResponse.data.id;
 
-          // Update status to PUBLISHED
+          // Update status to PUBLISHED and store live URL
           await prisma.post.update({
             where: { id: post.id },
             data: {
               status: "PUBLISHED",
               publishedAt: new Date(),
               error: null,
+              platformSettings: { videoId, url: `https://www.youtube.com/watch?v=${videoId}` }
             },
           });
 
