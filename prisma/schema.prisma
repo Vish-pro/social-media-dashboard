@@ -114,3 +114,14 @@ model Post {
   workspace     Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   socialAccount SocialAccount @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
 }
+
+model UploadJob {
+  id        String   @id @default(cuid())
+  userId    String
+  status    String   @default("PENDING") // PENDING, COMPLETED, FAILED
+  videoId   String?
+  url       String?
+  error     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

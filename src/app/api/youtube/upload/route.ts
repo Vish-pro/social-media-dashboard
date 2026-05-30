@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { getServerSession } from "next-auth";
 import { google } from "googleapis";
 import { Readable } from "stream";
@@ -63,41 +63,72 @@ export async function POST(req: Request) {
 
     const youtube = google.youtube({ version: "v3", auth: oauth2Client });
 
-    // Fetch the video from the provided URL and stream it directly to YouTube
-    const videoResponse = await fetch(videoUrl);
-    if (!videoResponse.ok || !videoResponse.body) {
-      return NextResponse.json(
-        { error: "Failed to fetch video from the provided URL" },
-        { status: 400 }
-      );
-    }
-
-    const videoStream = Readable.fromWeb(videoResponse.body as any);
-
-    const uploadResponse = await youtube.videos.insert({
-      part: ["snippet", "status"],
-      requestBody: {
-        snippet: {
-          title,
-          description: description ?? "",
-          categoryId: "22", // People & Blogs
-        },
-        status: {
-          privacyStatus: "private",
-        },
-      },
-      media: {
-        mimeType: "video/*",
-        body: videoStream,
+    const job = await prisma.uploadJob.create({
+      data: {
+        userId: (session.user as any).id,
+        status: "PENDING",
       },
     });
 
-    const videoId = uploadResponse.data.id;
+    after(async () => {
+      try {
+        // Fetch the video from the provided URL and stream it directly to YouTube
+        const videoResponse = await fetch(videoUrl);
+        if (!videoResponse.ok || !videoResponse.body) {
+          await prisma.uploadJob.update({
+            where: { id: job.id },
+            data: { status: "FAILED", error: "Failed to fetch video from the provided URL" },
+          });
+          return;
+        }
+
+        const videoStream = Readable.fromWeb(videoResponse.body as any);
+
+        const uploadResponse = await youtube.videos.insert({
+          part: ["snippet", "status"],
+          requestBody: {
+            snippet: {
+              title,
+              description: description ?? "",
+              categoryId: "22", // People & Blogs
+            },
+            status: {
+              privacyStatus: "private",
+            },
+          },
+          media: {
+            mimeType: "video/*",
+            body: videoStream,
+          },
+        });
+
+        const videoId = uploadResponse.data.id;
+
+        await prisma.uploadJob.update({
+          where: { id: job.id },
+          data: {
+            status: "COMPLETED",
+            videoId,
+            url: `https://www.youtube.com/watch?v=${videoId}`,
+          },
+        });
+
+      } catch (error) {
+        console.error("YouTube Upload Background Error:", error);
+        await prisma.uploadJob.update({
+          where: { id: job.id },
+          data: {
+            status: "FAILED",
+            error: error instanceof Error ? error.message : "Background upload failed",
+          },
+        });
+      }
+    });
 
     return NextResponse.json({
       success: true,
-      videoId,
-      url: `https://www.youtube.com/watch?v=${videoId}`,
+      jobId: job.id,
+      message: "Upload queued",
     });
   } catch (error) {
     console.error("YouTube Upload Error:", error);

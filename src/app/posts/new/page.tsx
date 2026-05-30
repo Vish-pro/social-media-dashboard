@@ -71,18 +71,49 @@ export default function NewPost() {
       });
       const data = await res.json();
       if (res.ok) {
-        if (!createAnother) window.location.href = "/posts";
-        else {
-          setContent("");
-          setMediaFiles([]);
-          setMediaPreviews([]);
+        if (data.jobId) {
+          // Poll for completion
+          const pollStatus = async () => {
+            const statusRes = await fetch(`/api/youtube/upload/status?jobId=${data.jobId}`);
+            if (!statusRes.ok) {
+              alert("Error polling upload status.");
+              setSubmitting(false);
+              return;
+            }
+            const statusData = await statusRes.json();
+            if (statusData.status === "COMPLETED") {
+              if (!createAnother) window.location.href = "/posts";
+              else {
+                setContent("");
+                setMediaFiles([]);
+                setMediaPreviews([]);
+                setSubmitting(false);
+              }
+            } else if (statusData.status === "FAILED") {
+              alert("Error: " + statusData.error);
+              setSubmitting(false);
+            } else {
+              // Still PENDING, poll again after 1s
+              setTimeout(pollStatus, 1000);
+            }
+          };
+          pollStatus();
+        } else {
+          // Fallback if no jobId
+          if (!createAnother) window.location.href = "/posts";
+          else {
+            setContent("");
+            setMediaFiles([]);
+            setMediaPreviews([]);
+            setSubmitting(false);
+          }
         }
       } else {
         alert("Error: " + data.error);
+        setSubmitting(false);
       }
     } catch {
       alert("Failed to post.");
-    } finally {
       setSubmitting(false);
     }
   };
