@@ -112,6 +112,6 @@ export async function GET(req: Request) {
     });
   } catch (error) {
     console.error("YouTube Stats Error:", error);
-    return NextResponse.json({ connected: false, error: error instanceof Error ? error.message : "Something went wrong" });
+    return NextResponse.json({ connected: false, error: "Something went wrong" });
   }
 }
