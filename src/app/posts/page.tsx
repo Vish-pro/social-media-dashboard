@@ -186,239 +186,146 @@ export default function PostsPage() {
             <div style={{ textAlign: "center", padding: "40px", color: "var(--text-muted)" }}>Loading posts...</div>
           ) : posts.length > 0 ? (
             <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-                // Grouping posts by postGroup or individual posts
-                const groupedPostsMap: Record<string, {
-                  id: string;
-                  content: string;
-                  createdAt: string;
-                  mediaUrls: string[];
-                  status: string;
-                  posts: any[];
-                }> = {};
+          ) : posts.length > 0 ? (
+            <div style={{
+              background: "var(--bg-secondary)",
+              border: "1px solid var(--border-color)",
+              borderRadius: "12px",
+              overflow: "hidden",
+              boxShadow: "0 10px 30px rgba(0, 0, 0, 0.2)"
+            }}>
+              {/* Table Header */}
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: "1.2fr 2fr 1fr 0.7fr 0.9fr 0.7fr 0.9fr 0.8fr",
+                padding: "10px 16px",
+                background: "var(--bg-tertiary)",
+                borderBottom: "1px solid var(--border-color)",
+                fontSize: "0.75rem",
+                fontWeight: 700,
+                color: "var(--text-secondary)",
+                textTransform: "uppercase",
+                letterSpacing: "0.05em"
+              }}>
+                <span>Date & Time</span>
+                <span>Post Content</span>
+                <span>Channel</span>
+                <span style={{ textAlign: "center" }}>Likes</span>
+                <span style={{ textAlign: "center" }}>Comments</span>
+                <span style={{ textAlign: "center" }}>Views</span>
+                <span style={{ textAlign: "center" }}>Eng. Rate</span>
+                <span style={{ textAlign: "right" }}>Live Link</span>
+              </div>
 
-                posts.forEach((post) => {
-                  const key = post.postGroupId || `single-${post.id}`;
-                  if (!groupedPostsMap[key]) {
-                    groupedPostsMap[key] = {
-                      id: key,
-                      content: post.content || "Untitled Post",
-                      createdAt: post.createdAt,
-                      mediaUrls: post.mediaUrls || [],
-                      status: post.status,
-                      posts: [],
-                    };
+              {/* Table Rows */}
+              {posts.map((post) => {
+                const acc = post.socialAccount;
+                const platformLabel = acc?.platform === "youtube" ? "YouTube" : acc?.platform === "linkedin" ? "LinkedIn" : acc?.platform === "medium" ? "Medium" : acc?.platform === "bluesky" ? "Bluesky" : "Other";
+                const platformIcon = acc?.platform === "youtube" ? "▶" : acc?.platform === "linkedin" ? "in" : acc?.platform === "medium" ? "M" : acc?.platform === "bluesky" ? "🦋" : "🔗";
+                const platformColor = acc?.platform === "youtube" ? "#ff0000" : acc?.platform === "linkedin" ? "#0077b5" : acc?.platform === "medium" ? "#000" : acc?.platform === "bluesky" ? "#0085ff" : "var(--accent-primary)";
+
+                // Generate consistent metrics
+                const hash = post.id.split("").reduce((accVal: number, char: string) => accVal + char.charCodeAt(0), 0);
+                const views = post.status === "PUBLISHED" ? (hash % 720) + 140 : 0;
+                const likes = post.status === "PUBLISHED" ? Math.floor(views * (0.06 + (hash % 8) / 100)) : 0;
+                const comments = post.status === "PUBLISHED" ? Math.floor(likes * (0.12 + (hash % 6) / 50)) : 0;
+                const er = post.status === "PUBLISHED" ? ((likes + comments) / views * 100).toFixed(1) + "%" : "0.0%";
+
+                // Retrieve live post URL
+                let liveUrl = "";
+                if (post.status === "PUBLISHED") {
+                  if (post.platformSettings) {
+                    try {
+                      const settings = typeof post.platformSettings === "string" ? JSON.parse(post.platformSettings) : post.platformSettings;
+                      liveUrl = settings.url || "";
+                    } catch {}
                   }
-                  groupedPostsMap[key].posts.push(post);
-                });
+                  if (!liveUrl && acc?.platform === "youtube" && acc?.accountId) {
+                    liveUrl = `https://studio.youtube.com`;
+                  }
+                }
 
                 return (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-                    {Object.values(groupedPostsMap).map((group) => {
-                      return (
-                        <div
-                          key={group.id}
-                          className="post-item"
+                  <div
+                    key={post.id}
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1.2fr 2fr 1fr 0.7fr 0.9fr 0.7fr 0.9fr 0.8fr",
+                      padding: "10px 16px",
+                      fontSize: "0.85rem",
+                      alignItems: "center",
+                      color: "var(--text-primary)",
+                      borderBottom: "1px solid var(--border-color)",
+                      background: "var(--bg-secondary)"
+                    }}
+                  >
+                    {/* Date & Time */}
+                    <span style={{ color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: "6px" }}>
+                      🕒 {new Date(post.createdAt).toLocaleDateString()} {new Date(post.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+
+                    {/* Post Content */}
+                    <span style={{ 
+                      fontWeight: 500, 
+                      whiteSpace: "nowrap", 
+                      overflow: "hidden", 
+                      textOverflow: "ellipsis",
+                      paddingRight: "16px",
+                      color: "var(--text-primary)"
+                    }}>
+                      {post.content || "Untitled Post"}
+                    </span>
+
+                    {/* Channel Badge */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <span style={{
+                        width: "20px",
+                        height: "20px",
+                        borderRadius: "50%",
+                        background: platformColor,
+                        color: "#fff",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "0.7rem",
+                        fontWeight: 700
+                      }}>
+                        {platformIcon}
+                      </span>
+                      <span style={{ fontWeight: 600 }}>{platformLabel}</span>
+                    </div>
+
+                    {/* Metrics */}
+                    <span style={{ textAlign: "center", fontWeight: 600 }}>{likes}</span>
+                    <span style={{ textAlign: "center", fontWeight: 600 }}>{comments}</span>
+                    <span style={{ textAlign: "center", fontWeight: 600 }}>{views}</span>
+                    <span style={{ textAlign: "center", color: "var(--accent-hover)", fontWeight: 700 }}>{er}</span>
+
+                    {/* Action Link */}
+                    <span style={{ textAlign: "right" }}>
+                      {post.status === "PUBLISHED" ? (
+                        <a
+                          href={liveUrl || "#"}
+                          target="_blank"
+                          rel="noopener noreferrer"
                           style={{
-                            background: "var(--bg-secondary)",
-                            border: "1px solid var(--border-color)",
-                            borderRadius: "16px",
-                            padding: "24px",
-                            boxShadow: "0 10px 30px rgba(0, 0, 0, 0.2)",
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: "20px"
+                            color: "var(--accent-primary)",
+                            fontWeight: 700,
+                            fontSize: "0.8rem",
+                            textDecoration: "underline",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "2px"
                           }}
                         >
-                          {/* Header: Title / Content Preview */}
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "16px" }}>
-                            <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
-                              <div style={{
-                                width: "48px",
-                                height: "48px",
-                                borderRadius: "10px",
-                                background: group.mediaUrls?.[0] ? "rgba(99, 102, 241, 0.15)" : "var(--bg-tertiary)",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                fontSize: "22px",
-                                border: "1px solid var(--border-color)"
-                              }}>
-                                {group.mediaUrls?.[0] ? "🎬" : "✍️"}
-                              </div>
-                              <div>
-                                <h3 style={{ fontSize: "1.1rem", fontWeight: 600, color: "var(--text-primary)", margin: 0 }}>
-                                  {group.content}
-                                </h3>
-                                <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginTop: "4px" }}>
-                                  Channels: <span style={{ color: "var(--accent-hover)", fontWeight: 600 }}>{group.posts.length}</span>
-                                </p>
-                              </div>
-                            </div>
-
-                            {/* Top Action buttons */}
-                            <div style={{ display: "flex", gap: "8px" }}>
-                              {activeTab === "approvals" && (
-                                <>
-                                  <button
-                                    onClick={() => handleApprove(group.posts[0].id)}
-                                    className="btn-primary"
-                                    style={{ padding: "8px 16px", fontSize: "0.85rem" }}
-                                  >
-                                    Approve ✓
-                                  </button>
-                                  <button
-                                    onClick={() => handleReject(group.posts[0].id)}
-                                    className="btn-secondary"
-                                    style={{ padding: "8px 16px", fontSize: "0.85rem", background: "var(--danger)", color: "#fff", borderColor: "transparent" }}
-                                  >
-                                    Reject ✕
-                                  </button>
-                                </>
-                              )}
-                              {activeTab === "drafts" && (
-                                <Link
-                                  href="/posts/new"
-                                  className="btn-secondary"
-                                  style={{ padding: "8px 16px", fontSize: "0.85rem" }}
-                                >
-                                  Edit ✏️
-                                </Link>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Tabular Details Grid */}
-                          <div style={{
-                            background: "var(--bg-primary)",
-                            border: "1px solid var(--border-color)",
-                            borderRadius: "12px",
-                            overflow: "hidden"
-                          }}>
-                            {/* Table Header */}
-                            <div style={{
-                              display: "grid",
-                              gridTemplateColumns: "1.5fr 1fr 1fr 1fr 1fr 1.2fr 1fr",
-                              padding: "12px 20px",
-                              background: "var(--bg-tertiary)",
-                              borderBottom: "1px solid var(--border-color)",
-                              fontSize: "0.75rem",
-                              fontWeight: 700,
-                              color: "var(--text-secondary)",
-                              textTransform: "uppercase",
-                              letterSpacing: "0.05em"
-                            }}>
-                              <span>Date & Time</span>
-                              <span>Channel</span>
-                              <span style={{ textAlign: "center" }}>Likes</span>
-                              <span style={{ textAlign: "center" }}>Comments</span>
-                              <span style={{ textAlign: "center" }}>Views</span>
-                              <span style={{ textAlign: "center" }}>Eng. Rate</span>
-                              <span style={{ textAlign: "right" }}>Action</span>
-                            </div>
-
-                            {/* Table Body Rows (One for each channel post in group) */}
-                            {group.posts.map((post) => {
-                              const acc = post.socialAccount;
-                              const platformLabel = acc?.platform === "youtube" ? "YouTube" : acc?.platform === "linkedin" ? "LinkedIn" : acc?.platform === "medium" ? "Medium" : acc?.platform === "bluesky" ? "Bluesky" : "Other";
-                              const platformIcon = acc?.platform === "youtube" ? "▶" : acc?.platform === "linkedin" ? "in" : acc?.platform === "medium" ? "M" : acc?.platform === "bluesky" ? "🦋" : "🔗";
-                              const platformColor = acc?.platform === "youtube" ? "#ff0000" : acc?.platform === "linkedin" ? "#0077b5" : acc?.platform === "medium" ? "#000" : acc?.platform === "bluesky" ? "#0085ff" : "var(--accent-primary)";
-
-                              // Generate consistent metrics
-                              const hash = post.id.split("").reduce((accVal: number, char: string) => accVal + char.charCodeAt(0), 0);
-                              const views = post.status === "PUBLISHED" ? (hash % 720) + 140 : 0;
-                              const likes = post.status === "PUBLISHED" ? Math.floor(views * (0.06 + (hash % 8) / 100)) : 0;
-                              const comments = post.status === "PUBLISHED" ? Math.floor(likes * (0.12 + (hash % 6) / 50)) : 0;
-                              const er = post.status === "PUBLISHED" ? ((likes + comments) / views * 100).toFixed(1) + "%" : "0.0%";
-
-                              // Retrieve live post URL
-                              let liveUrl = "";
-                              if (post.status === "PUBLISHED") {
-                                if (post.platformSettings) {
-                                  try {
-                                    const settings = typeof post.platformSettings === "string" ? JSON.parse(post.platformSettings) : post.platformSettings;
-                                    liveUrl = settings.url || "";
-                                  } catch {}
-                                }
-                                if (!liveUrl && acc?.platform === "youtube" && acc?.accountId) {
-                                  liveUrl = `https://studio.youtube.com`;
-                                }
-                              }
-
-                              return (
-                                <div
-                                  key={post.id}
-                                  style={{
-                                    display: "grid",
-                                    gridTemplateColumns: "1.5fr 1fr 1fr 1fr 1fr 1.2fr 1fr",
-                                    padding: "18px 20px",
-                                    fontSize: "0.9rem",
-                                    alignItems: "center",
-                                    color: "var(--text-primary)",
-                                    borderBottom: "1px solid var(--border-color)",
-                                  }}
-                                >
-                                  {/* Date & Time */}
-                                  <span style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>
-                                    🕒 {new Date(post.createdAt).toLocaleString()}
-                                  </span>
-
-                                  {/* Channel Badge */}
-                                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                    <span style={{
-                                      width: "24px",
-                                      height: "24px",
-                                      borderRadius: "50%",
-                                      background: platformColor,
-                                      color: "#fff",
-                                      display: "flex",
-                                      alignItems: "center",
-                                      justifyContent: "center",
-                                      fontSize: "0.8rem",
-                                      fontWeight: 700
-                                    }}>
-                                      {platformIcon}
-                                    </span>
-                                    <span style={{ fontWeight: 600 }}>{platformLabel}</span>
-                                  </div>
-
-                                  {/* Metrics */}
-                                  <span style={{ textAlign: "center", fontWeight: 600 }}>{likes}</span>
-                                  <span style={{ textAlign: "center", fontWeight: 600 }}>{comments}</span>
-                                  <span style={{ textAlign: "center", fontWeight: 600 }}>{views}</span>
-                                  <span style={{ textAlign: "center", color: "var(--accent-hover)", fontWeight: 700 }}>{er}</span>
-
-                                  {/* Action Link */}
-                                  <span style={{ textAlign: "right" }}>
-                                    {post.status === "PUBLISHED" ? (
-                                      <a
-                                        href={liveUrl || "#"}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        style={{
-                                          color: "var(--accent-primary)",
-                                          fontWeight: 700,
-                                          fontSize: "0.85rem",
-                                          textDecoration: "underline",
-                                          display: "inline-flex",
-                                          alignItems: "center",
-                                          gap: "4px"
-                                        }}
-                                      >
-                                        View Post ↗
-                                      </a>
-                                    ) : (
-                                      <span style={{ color: "var(--text-secondary)", fontSize: "0.8rem", fontStyle: "italic" }}>
-                                        {post.status}
-                                      </span>
-                                    )}
-                                  </span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })}
+                          View Post ↗
+                        </a>
+                      ) : (
+                        <span style={{ color: "var(--text-secondary)", fontSize: "0.75rem", fontStyle: "italic" }}>
+                          {post.status}
+                        </span>
+                      )}
+                    </span>
                   </div>
                 );
               })}
