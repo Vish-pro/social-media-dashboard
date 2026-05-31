@@ -145,6 +145,47 @@ async function handlePublishQueue() {
             url: `https://www.youtube.com/watch?v=${videoId}`,
           });
 
+        } else if (platform === "x") {
+          const account = post.socialAccount;
+          if (!account.accessToken) {
+            throw new Error("No X.com credentials found for this account.");
+          }
+
+          const tweetText = post.content || "Posted from SocialPulse Dashboard";
+          const tweetRes = await fetch("https://api.twitter.com/2/tweets", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${account.accessToken}`,
+            },
+            body: JSON.stringify({ text: tweetText.slice(0, 280) }), // X limit
+          });
+
+          if (!tweetRes.ok) {
+            const errText = await tweetRes.text();
+            throw new Error(`X.com publishing failed: ${errText}`);
+          }
+
+          const tweetData = await tweetRes.json();
+          const tweetId = tweetData.data?.id;
+
+          await prisma.post.update({
+            where: { id: post.id },
+            data: {
+              status: "PUBLISHED",
+              publishedAt: new Date(),
+              error: null,
+              platformSettings: tweetId ? { tweetId, url: `https://x.com/user/status/${tweetId}` } : undefined
+            },
+          });
+
+          results.push({
+            postId: post.id,
+            platform: "x",
+            success: true,
+            tweetId,
+          });
+
         } else {
           // Instagram / Threads / Stub channels
           // Mock successful direct publishing since API connections are in-development or pending config

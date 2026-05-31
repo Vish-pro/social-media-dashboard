@@ -4,7 +4,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import "./connections.css";
 
 interface Connection {
-  platform: "bluesky" | "linkedin" | "medium" | "youtube";
+  platform: "bluesky" | "linkedin" | "medium" | "youtube" | "x";
   label: string;
   icon: string;
   color: string;
@@ -17,6 +17,8 @@ export default function ConnectionsPage() {
   const { activeWorkspaceId } = useWorkspace();
   const [ytConnected, setYtConnected] = useState(false);
   const [ytName, setYtName] = useState("");
+  const [xConnected, setXConnected] = useState(false);
+  const [xName, setXName] = useState("");
 
   const [blueskyHandle, setBlueskyHandle] = useState("");
   const [blueskyPassword, setBlueskyPassword] = useState("");
@@ -29,7 +31,7 @@ export default function ConnectionsPage() {
 
   const [connections, setConnections] = useState<Record<string, any>>({});
 
-  // Fetch YouTube connection state dynamically
+  // Fetch YouTube and X.com connection state dynamically
   useEffect(() => {
     if (!activeWorkspaceId) return;
     fetch(`/api/channels?workspaceId=${activeWorkspaceId}`)
@@ -43,10 +45,21 @@ export default function ConnectionsPage() {
           setYtConnected(false);
           setYtName("");
         }
+
+        const xChannel = d.channels?.find((c: any) => c.platform === "x");
+        if (xChannel) {
+          setXConnected(true);
+          setXName(xChannel.accountName);
+        } else {
+          setXConnected(false);
+          setXName("");
+        }
       })
       .catch(() => {
         setYtConnected(false);
         setYtName("");
+        setXConnected(false);
+        setXName("");
       });
   }, [activeWorkspaceId]);
 
@@ -90,6 +103,21 @@ export default function ConnectionsPage() {
         }
       } catch (err) {
         console.error("Failed to disconnect YouTube:", err);
+      }
+      return;
+    }
+    if (platform === "x") {
+      if (!activeWorkspaceId) return;
+      try {
+        const res = await fetch(`/api/channels?workspaceId=${activeWorkspaceId}&platform=x`, {
+          method: "DELETE",
+        });
+        if (res.ok) {
+          setXConnected(false);
+          setXName("");
+        }
+      } catch (err) {
+        console.error("Failed to disconnect X.com:", err);
       }
       return;
     }
@@ -205,6 +233,19 @@ export default function ConnectionsPage() {
       difficultyColor: "#22c55e",
     },
     {
+      id: "x",
+      label: "X / Twitter",
+      icon: "𝕏",
+      color: "#000000",
+      description: "Automated posting and scheduling. OAuth 2.0 Web App authorization.",
+      steps: [
+        "Click 'Connect X / Twitter' below",
+        "Sign in and authorize the application with your X profile",
+      ],
+      difficulty: "Very Easy",
+      difficultyColor: "#22c55e",
+    },
+    {
       id: "youtube",
       label: "YouTube",
       icon: "▶",
@@ -231,7 +272,7 @@ export default function ConnectionsPage() {
 
       <div className="connections-grid">
         {platforms.map((p) => {
-          const isConnected = p.id === "youtube" ? ytConnected : !!connections[p.id];
+          const isConnected = p.id === "youtube" ? ytConnected : (p.id === "x" ? xConnected : !!connections[p.id]);
           const conn = connections[p.id];
 
           return (
@@ -259,6 +300,7 @@ export default function ConnectionsPage() {
                     {p.id === "linkedin" && <span>{conn.name}</span>}
                     {p.id === "medium" && <span>{conn.name} (@{conn.username})</span>}
                     {p.id === "youtube" && <span>{ytName || "YouTube Channel"}</span>}
+                    {p.id === "x" && <span>{xName || "X / Twitter"}</span>}
                   </div>
                   <button className="btn-disconnect" onClick={() => disconnect(p.id)}>
                     Disconnect
@@ -341,6 +383,19 @@ export default function ConnectionsPage() {
                     </div>
                   )}
 
+                  {/* X.com — redirect to auth flow */}
+                  {p.id === "x" && (
+                    <div className="conn-form">
+                      <a 
+                        href={`/api/x/connect?workspaceId=${activeWorkspaceId}`} 
+                        className="btn-primary conn-oauth-btn"
+                        style={{ display: "block", textAlign: "center", textDecoration: "none" }}
+                      >
+                        Connect X / Twitter 𝕏
+                      </a>
+                    </div>
+                  )}
+
                   {/* YouTube — redirect to dashboard */}
                   {p.id === "youtube" && (
                     <div className="conn-form">
@@ -361,7 +416,6 @@ export default function ConnectionsPage() {
         <h2 className="coming-soon-title">Coming Soon</h2>
         <div className="coming-soon-grid">
           {[
-            { icon: "🐦", name: "X / Twitter", note: "Requires $100/mo Basic plan" },
             { icon: "📸", name: "Instagram", note: "Business API — review required" },
             { icon: "🧵", name: "Threads", note: "Limited API access" },
             { icon: "🤖", name: "Reddit", note: "Manual app approval required" },

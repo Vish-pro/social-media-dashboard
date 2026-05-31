@@ -38,6 +38,8 @@ export default function Dashboard() {
   const { activeWorkspaceId } = useWorkspace();
   const [stats, setStats] = useState<YTStats | null>(null);
   const [loading, setLoading] = useState(false);
+  const [xConnected, setXConnected] = useState(false);
+  const [xName, setXName] = useState("");
   // Read connections from localStorage (set by /connections page)
   const [lsConnections, setLsConnections] = useState<Record<string, any>>({});
 
@@ -63,6 +65,21 @@ export default function Dashboard() {
       })
       .catch((err) => console.error("Error loading YouTube stats:", err))
       .finally(() => setLoading(false));
+
+    // Load X connection state
+    fetch(`/api/channels?workspaceId=${activeWorkspaceId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        const xChannel = data.channels?.find((c: any) => c.platform === "x");
+        if (xChannel) {
+          setXConnected(true);
+          setXName(xChannel.accountName);
+        } else {
+          setXConnected(false);
+          setXName("");
+        }
+      })
+      .catch((err) => console.error("Error loading channels state on dashboard:", err));
   }, [activeWorkspaceId]);
 
   const ch = stats?.channel;
@@ -132,6 +149,35 @@ export default function Dashboard() {
               )}
             </div>
 
+            {/* X / Twitter */}
+            <div className="account-item">
+              <div className="account-platform-icon" style={{ background: "#000", color: "#fff", fontWeight: 700 }}>𝕏</div>
+              <div className="account-info">
+                {xConnected ? (
+                  <>
+                    <span className="account-name">{xName}</span>
+                    <span className="account-meta">Connected</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="account-name">X / Twitter</span>
+                    <span className="account-meta">Not connected</span>
+                  </>
+                )}
+              </div>
+              {xConnected ? (
+                <span className="account-badge connected">✓ Connected</span>
+              ) : (
+                <a
+                  href="/connections"
+                  className="btn-primary account-connect-btn"
+                  style={{ textDecoration: "none", textAlign: "center" }}
+                >
+                  Connect
+                </a>
+              )}
+            </div>
+
             {/* Bluesky */}
             <div className="account-item">
               <div className="account-platform-icon" style={{ background: "#0085ff", color: "#fff" }}>🦋</div>
@@ -187,7 +233,7 @@ export default function Dashboard() {
             </div>
 
             {/* Coming soon */}
-            {[{ name: "X / Twitter", icon: "𝕏" }, { name: "Instagram", icon: "📷" }].map((p) => (
+            {[{ name: "Instagram", icon: "📷" }].map((p) => (
               <div key={p.name} className="account-item">
                 <div className="account-platform-icon">{p.icon}</div>
                 <div className="account-info">

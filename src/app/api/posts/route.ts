@@ -180,6 +180,7 @@ export async function POST(req: Request) {
     let status = "DRAFT";
     let channelIds = [];
     let mediaUrls = [];
+    let thread: string[] = [];
 
     if (contentType.includes("multipart/form-data")) {
       const formData = await req.formData();
@@ -188,6 +189,11 @@ export async function POST(req: Request) {
       workspaceId = formData.get("workspaceId") as string;
       scheduledFor = formData.get("scheduledFor") as string;
       status = formData.get("status") as string || "DRAFT";
+      
+      const threadRaw = formData.get("thread") as string;
+      if (threadRaw) {
+        thread = JSON.parse(threadRaw);
+      }
       
       const channelsRaw = formData.get("channelIds") as string;
       if (channelsRaw) {
@@ -229,6 +235,7 @@ export async function POST(req: Request) {
       status = json.status || "DRAFT";
       channelIds = json.channelIds || [];
       mediaUrls = json.mediaUrls || [];
+      thread = json.thread || [];
 
       if (json.platforms && channelIds.length === 0) {
         const dbAccounts = await prisma.socialAccount.findMany({
@@ -291,10 +298,16 @@ export async function POST(req: Request) {
             select: { platform: true }
           });
 
-          const isQueuePlatform = account?.platform.toLowerCase() === "youtube";
+          const isQueuePlatform = account?.platform.toLowerCase() === "youtube" || account?.platform.toLowerCase() === "x";
           const postStatus = isQueuePlatform
             ? (finalStatus === "PUBLISHED" ? "APPROVED" : finalStatus)
             : finalStatus;
+
+          const platformSettings: any = {};
+          if (title) platformSettings.title = title;
+          if (account?.platform.toLowerCase() === "x" && thread && thread.length > 0) {
+            platformSettings.thread = thread;
+          }
 
           const post = await tx.post.create({
             data: {
@@ -305,7 +318,7 @@ export async function POST(req: Request) {
               scheduledFor: scheduledDate,
               content: content,
               mediaUrls: mediaUrls,
-              platformSettings: title ? { title, description: content } : undefined,
+              platformSettings: Object.keys(platformSettings).length > 0 ? platformSettings : undefined,
             },
           });
           posts.push(post);

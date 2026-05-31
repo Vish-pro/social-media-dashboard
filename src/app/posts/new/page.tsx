@@ -7,6 +7,7 @@ import "./Composer.css";
 
 // Supported platforms — icon, color, and which API to call
 const PLATFORMS = [
+  { id: "x",        label: "X / Twitter", icon: "𝕏", color: "#000000" },
   { id: "bluesky",  label: "Bluesky",  icon: "🦋", color: "#0085ff" },
   { id: "linkedin", label: "LinkedIn", icon: "in", color: "#0077b5" },
   { id: "medium",   label: "Medium",   icon: "M",  color: "#000000" },
@@ -22,6 +23,33 @@ interface PublishResult {
 export default function NewPost() {
   const { activeWorkspaceId } = useWorkspace();
   const [content, setContent] = useState("");
+  const [threadTweets, setThreadTweets] = useState<string[]>([""]);
+
+  const updateThreadTweet = (index: number, val: string) => {
+    setThreadTweets((prev) => {
+      const next = [...prev];
+      next[index] = val;
+      if (index === 0) {
+        setContent(val);
+      }
+      return next;
+    });
+  };
+
+  const addThreadTweet = () => {
+    setThreadTweets((prev) => [...prev, ""]);
+  };
+
+  const removeThreadTweet = (index: number) => {
+    setThreadTweets((prev) => {
+      const next = prev.filter((_, i) => i !== index);
+      if (index === 0 && next[0]) {
+        setContent(next[0]);
+      }
+      return next;
+    });
+  };
+
   const [title, setTitle] = useState(""); // for Medium
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [connectedPlatforms, setConnectedPlatforms] = useState<string[]>([]);
@@ -70,6 +98,16 @@ export default function NewPost() {
           updatedConn.youtube = { name: ytChannel.accountName };
           if (!updatedConnected.includes("youtube")) {
             updatedConnected.push("youtube");
+          }
+        }
+
+        // Find X.com platform connection from channels database list
+        const xChannel = d.channels?.find((c: any) => c.platform === "x");
+
+        if (xChannel) {
+          updatedConn.x = { name: xChannel.accountName };
+          if (!updatedConnected.includes("x")) {
+            updatedConnected.push("x");
           }
         }
 
@@ -176,6 +214,21 @@ export default function NewPost() {
         if (platformId === "youtube") {
           results.push({ platform: "YouTube", ok: true, msg: "Video queued for immediate public upload..." });
         }
+
+        if (platformId === "x") {
+          const isThread = selectedPlatforms.length === 1 && selectedPlatforms[0] === "x" && threadTweets.length > 1;
+          const res = await fetch("/api/x/post", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              workspaceId: activeWorkspaceId,
+              text: content,
+              thread: isThread ? threadTweets : undefined,
+            }),
+          });
+          const data = await res.json();
+          results.push({ platform: "X / Twitter", ok: res.ok, msg: res.ok ? "Tweeted! 𝕏" : data.error });
+        }
       } catch {
         results.push({ platform: platformId, ok: false, msg: "Network error." });
       }
@@ -193,6 +246,10 @@ export default function NewPost() {
         formData.append("scheduledFor", scheduledDate);
       }
       if (mediaFiles[0]) formData.append("file", mediaFiles[0]);
+
+      if (selectedPlatforms.length === 1 && selectedPlatforms[0] === "x" && threadTweets.length > 1) {
+        formData.append("thread", JSON.stringify(threadTweets));
+      }
 
       await fetch("/api/posts", { method: "POST", body: formData }).catch(() => {});
 
@@ -235,7 +292,8 @@ export default function NewPost() {
     }
   };
 
-  const remaining = 300 - content.length; // tightest limit is Bluesky
+  const limit = selectedPlatforms.includes("x") ? 280 : 300;
+  const remaining = limit - content.length;
 
   return (
     <div className="composer-page">
@@ -315,31 +373,126 @@ export default function NewPost() {
               </div>
             </div>
 
-            {/* Description / Content field */}
-            <div className="details-field-group" style={{ marginTop: "16px" }}>
-              <div className="details-label-row">
-                <label className="details-label">
-                  {selectedPlatforms.includes("youtube") ? "Description" : "Content / Caption"}
+            {/* Description / Content field OR X Thread Compose Box */}
+            {selectedPlatforms.length === 1 && selectedPlatforms[0] === "x" ? (
+              <div className="x-thread-editor" style={{ marginTop: "16px", position: "relative" }}>
+                <label className="details-label" style={{ display: "block", marginBottom: "8px", color: "var(--text-muted)" }}>
+                  X / Twitter Thread
                 </label>
-                <span className="details-help-icon" title="Tell your viewers or readers what your post is about.">❓</span>
+                <div className="thread-timeline-line" style={{
+                  position: "absolute",
+                  left: "17px",
+                  top: "54px",
+                  bottom: "60px",
+                  width: "2px",
+                  background: "var(--border)",
+                  zIndex: 0
+                }} />
+                {threadTweets.map((tweet, index) => {
+                  const remainingChars = 280 - tweet.length;
+                  return (
+                    <div key={index} className="thread-tweet-node" style={{
+                      display: "flex",
+                      gap: "12px",
+                      position: "relative",
+                      zIndex: 1,
+                      marginBottom: "16px"
+                    }}>
+                      <div className="thread-node-avatar" style={{
+                        width: "36px",
+                        height: "36px",
+                        borderRadius: "50%",
+                        background: "var(--accent)",
+                        color: "#fff",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "0.8rem",
+                        fontWeight: 700,
+                        flexShrink: 0
+                      }}>
+                        V
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 500 }}>
+                            {index === 0 ? "First Tweet" : `Tweet #${index + 1}`}
+                          </span>
+                          {index > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => removeThreadTweet(index)}
+                              style={{
+                                background: "none",
+                                border: "none",
+                                color: "#ef4444",
+                                cursor: "pointer",
+                                fontSize: "0.75rem"
+                              }}
+                            >
+                              ✕ Remove
+                            </button>
+                          )}
+                        </div>
+                        <textarea
+                          className="details-textarea"
+                          style={{ minHeight: "80px", marginTop: "6px" }}
+                          placeholder={index === 0 ? "Start writing your thread..." : "Add another tweet to your thread..."}
+                          value={tweet}
+                          onChange={(e) => updateThreadTweet(index, e.target.value)}
+                          maxLength={280}
+                        />
+                        <div style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          marginTop: "6px"
+                        }}>
+                          <span style={{ fontSize: "0.75rem", color: remainingChars < 20 ? "#ef4444" : "var(--text-muted)" }}>
+                            {remainingChars}/280
+                          </span>
+                          {index === threadTweets.length - 1 && (
+                            <button
+                              type="button"
+                              onClick={addThreadTweet}
+                              className="details-hashtag-btn"
+                              style={{ padding: "4px 10px", fontSize: "0.75rem", color: "var(--accent)" }}
+                            >
+                              ➕ Start Thread / Add Tweet
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-              <textarea
-                className="details-textarea"
-                placeholder={
-                  selectedPlatforms.includes("youtube")
-                    ? "Tell viewers about your video (type @ to mention a channel)"
-                    : "Start writing your post content here… (Bluesky: max 300 chars)"
-                }
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                maxLength={selectedPlatforms.includes("medium") ? 50000 : 2200}
-              />
-              <div className="details-field-footer" style={{ justifyContent: "flex-end" }}>
-                <span className="details-counter">
-                  {content.length}/{selectedPlatforms.includes("medium") ? "50000" : "2200"}
-                </span>
+            ) : (
+              <div className="details-field-group" style={{ marginTop: "16px" }}>
+                <div className="details-label-row">
+                  <label className="details-label">
+                    {selectedPlatforms.includes("youtube") ? "Description" : "Content / Caption"}
+                  </label>
+                  <span className="details-help-icon" title="Tell your viewers or readers what your post is about.">❓</span>
+                </div>
+                <textarea
+                  className="details-textarea"
+                  placeholder={
+                    selectedPlatforms.includes("youtube")
+                      ? "Tell viewers about your video (type @ to mention a channel)"
+                      : "Start writing your post content here… (Bluesky: max 300 chars)"
+                  }
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  maxLength={selectedPlatforms.includes("medium") ? 50000 : 2200}
+                />
+                <div className="details-field-footer" style={{ justifyContent: "flex-end" }}>
+                  <span className="details-counter">
+                    {content.length}/{selectedPlatforms.includes("medium") ? "50000" : "2200"}
+                  </span>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Uploaded media thumbnails */}
@@ -399,7 +552,7 @@ export default function NewPost() {
               <button className="tool-btn" title="Hashtag">#</button>
             </div>
             <span className={`char-count ${remaining < 50 ? "warn" : ""}`}>
-              {remaining >= 0 ? remaining : `+${Math.abs(remaining)} over Bluesky limit`}
+              {remaining >= 0 ? remaining : `+${Math.abs(remaining)} over limit`}
             </span>
           </div>
 
