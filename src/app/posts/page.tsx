@@ -223,18 +223,27 @@ export default function PostsPage() {
                 const platformIcon = acc?.platform === "youtube" ? "▶" : acc?.platform === "linkedin" ? "in" : acc?.platform === "medium" ? "M" : acc?.platform === "bluesky" ? "🦋" : "🔗";
                 const platformColor = acc?.platform === "youtube" ? "#ff0000" : acc?.platform === "linkedin" ? "#0077b5" : acc?.platform === "medium" ? "#000" : acc?.platform === "bluesky" ? "#0085ff" : "var(--accent-primary)";
 
-                // Generate consistent metrics
-                const hash = post.id.split("").reduce((accVal: number, char: string) => accVal + char.charCodeAt(0), 0);
-                const views = post.status === "PUBLISHED" ? (hash % 720) + 140 : 0;
-                const likes = post.status === "PUBLISHED" ? Math.floor(views * (0.06 + (hash % 8) / 100)) : 0;
-                const comments = post.status === "PUBLISHED" ? Math.floor(likes * (0.12 + (hash % 6) / 50)) : 0;
-                const er = post.status === "PUBLISHED" ? ((likes + comments) / views * 100).toFixed(1) + "%" : "0.0%";
-
-                // Metrics placeholder logic (use em-dash when not live/published)
-                const viewsText = post.status === "PUBLISHED" ? views.toString() : "—";
-                const likesText = post.status === "PUBLISHED" ? likes.toString() : "—";
-                const commentsText = post.status === "PUBLISHED" ? comments.toString() : "—";
-                const erText = post.status === "PUBLISHED" ? er : "—";
+                 // Generate consistent metrics (mock as fallback, real if available)
+                 const hash = post.id.split("").reduce((accVal: number, char: string) => accVal + char.charCodeAt(0), 0);
+                 const hasRealMetrics = !!post.metrics;
+                 const views = hasRealMetrics 
+                   ? post.metrics.views 
+                   : (post.status === "PUBLISHED" ? (hash % 720) + 140 : 0);
+                 const likes = hasRealMetrics 
+                   ? post.metrics.likes 
+                   : (post.status === "PUBLISHED" ? Math.floor(views * (0.06 + (hash % 8) / 100)) : 0);
+                 const comments = hasRealMetrics 
+                   ? post.metrics.comments 
+                   : (post.status === "PUBLISHED" ? Math.floor(likes * (0.12 + (hash % 6) / 50)) : 0);
+                 const er = views > 0 
+                   ? (((likes + comments) / views) * 100).toFixed(1) + "%" 
+                   : "0.0%";
+ 
+                 // Metrics placeholder logic (use em-dash when not live/published)
+                 const viewsText = post.status === "PUBLISHED" ? views.toLocaleString() : "—";
+                 const likesText = post.status === "PUBLISHED" ? likes.toLocaleString() : "—";
+                 const commentsText = post.status === "PUBLISHED" ? comments.toLocaleString() : "—";
+                 const erText = post.status === "PUBLISHED" ? er : "—";
 
                 // Retrieve live post URL
                 let liveUrl = "";

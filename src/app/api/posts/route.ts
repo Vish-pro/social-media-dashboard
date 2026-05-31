@@ -4,6 +4,17 @@ import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/lib/authOptions";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
+import { google } from "googleapis";
+
+// Global in-memory cache for video metrics
+interface VideoMetricsCacheEntry {
+  views: number;
+  likes: number;
+  comments: number;
+  timestamp: number;
+}
+const videoMetricsCache = new Map<string, VideoMetricsCacheEntry>();
+const METRICS_CACHE_TTL = 10 * 60 * 1000; // 10 minutes cache
 
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
@@ -54,7 +65,104 @@ export async function GET(req: Request) {
     orderBy: { scheduledFor: "asc" },
   });
 
-  return NextResponse.json({ posts });
+  const postsWithMetrics = posts.map(post => {
+    return {
+      ...post,
+      metrics: null as { views: number; likes: number; comments: number } | null
+    };
+  });
+
+  // Fetch real YouTube statistics for published videos
+  const ytPosts = postsWithMetrics.filter(
+    p => p.socialAccount?.platform.toLowerCase() === "youtube" && p.status === "PUBLISHED"
+  );
+
+  const videoIdsToQuery = [];
+  const postMapByVideoId = {};
+
+  for (const post of ytPosts) {
+    if (post.platformSettings) {
+      try {
+        const settings = typeof post.platformSettings === "string"
+          ? JSON.parse(post.platformSettings)
+          : post.platformSettings;
+        if (settings.videoId) {
+          const vid = settings.videoId;
+          
+          // Check if cached and fresh
+          const cached = videoMetricsCache.get(vid);
+          if (cached && Date.now() - cached.timestamp < METRICS_CACHE_TTL) {
+            post.metrics = {
+              views: cached.views,
+              likes: cached.likes,
+              comments: cached.comments,
+            };
+          } else {
+            videoIdsToQuery.push(vid);
+            if (!postMapByVideoId[vid]) {
+              postMapByVideoId[vid] = [];
+            }
+            postMapByVideoId[vid].push(post);
+          }
+        }
+      } catch {}
+    }
+  }
+
+  if (videoIdsToQuery.length > 0) {
+    const account = await prisma.socialAccount.findFirst({
+      where: { workspaceId, platform: "youtube" }
+    });
+
+    if (account?.accessToken) {
+      try {
+        const oauth2Client = new google.auth.OAuth2(
+          process.env.GOOGLE_CLIENT_ID,
+          process.env.GOOGLE_CLIENT_SECRET,
+          `${process.env.NEXTAUTH_URL}/api/auth/callback/google`
+        );
+        oauth2Client.setCredentials({
+          access_token: account.accessToken,
+          refresh_token: account.refreshToken,
+        });
+
+        const youtube = google.youtube({ version: "v3", auth: oauth2Client });
+        const videoListRes = await youtube.videos.list({
+          id: videoIdsToQuery,
+          part: ["statistics"]
+        });
+
+        const videoItems = videoListRes.data.items || [];
+        for (const item of videoItems) {
+          const stats = item.statistics;
+          const matchedPosts = postMapByVideoId[item.id];
+          if (stats) {
+            const metrics = {
+              views: Number(stats.viewCount ?? 0),
+              likes: Number(stats.likeCount ?? 0),
+              comments: Number(stats.commentCount ?? 0),
+            };
+
+            // Cache the metrics
+            videoMetricsCache.set(item.id, {
+              ...metrics,
+              timestamp: Date.now(),
+            });
+
+            if (matchedPosts) {
+              for (const post of matchedPosts) {
+                post.metrics = metrics;
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching real YouTube stats for posts:", err);
+      }
+    }
+  }
+
+  return NextResponse.json({ posts: postsWithMetrics });
 }
 
 export async function POST(req: Request) {
@@ -66,15 +174,17 @@ export async function POST(req: Request) {
   try {
     const contentType = req.headers.get("content-type") || "";
     let content = "";
+    let title = "";
     let workspaceId = "";
     let scheduledFor = "";
     let status = "DRAFT";
-    let channelIds: string[] = [];
-    let mediaUrls: string[] = [];
+    let channelIds = [];
+    let mediaUrls = [];
 
     if (contentType.includes("multipart/form-data")) {
       const formData = await req.formData();
       content = formData.get("content") as string;
+      title = formData.get("title") as string || "";
       workspaceId = formData.get("workspaceId") as string;
       scheduledFor = formData.get("scheduledFor") as string;
       status = formData.get("status") as string || "DRAFT";
@@ -113,6 +223,7 @@ export async function POST(req: Request) {
     } else {
       const json = await req.json();
       content = json.content;
+      title = json.title || "";
       workspaceId = json.workspaceId;
       scheduledFor = json.scheduledFor;
       status = json.status || "DRAFT";
@@ -194,6 +305,7 @@ export async function POST(req: Request) {
               scheduledFor: scheduledDate,
               content: content,
               mediaUrls: mediaUrls,
+              platformSettings: title ? { title, description: content } : undefined,
             },
           });
           posts.push(post);

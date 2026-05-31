@@ -4,6 +4,14 @@ import { google } from "googleapis";
 import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/lib/authOptions";
 
+// Global in-memory cache for channel stats and analytics
+interface CacheEntry {
+  timestamp: number;
+  data: any;
+}
+const statsCache = new Map<string, CacheEntry>();
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
 export async function GET(req: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -25,6 +33,13 @@ export async function GET(req: Request) {
 
     if (!account?.accessToken) {
       return NextResponse.json({ connected: false });
+    }
+
+    // Check in-memory cache
+    const cacheKey = `${workspaceId}_${account.id}`;
+    const cached = statsCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+      return NextResponse.json(cached.data);
     }
 
     const oauth2Client = new google.auth.OAuth2(
@@ -97,7 +112,7 @@ export async function GET(req: Request) {
       // Analytics scope not yet granted — chart falls back to empty state
     }
 
-    return NextResponse.json({
+    const responseData = {
       connected: true,
       channel: {
         id: channel.id,
@@ -109,7 +124,15 @@ export async function GET(req: Request) {
         commentCount: Number(stats?.commentCount ?? 0),
       },
       chartData,
+    };
+
+    // Cache the response
+    statsCache.set(cacheKey, {
+      timestamp: Date.now(),
+      data: responseData,
     });
+
+    return NextResponse.json(responseData);
   } catch (error) {
     console.error("YouTube Stats Error:", error);
     return NextResponse.json({ connected: false, error: "Something went wrong" });

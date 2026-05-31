@@ -32,12 +32,13 @@ export default function ConnectionsPage() {
   // Fetch YouTube connection state dynamically
   useEffect(() => {
     if (!activeWorkspaceId) return;
-    fetch(`/api/youtube/stats?workspaceId=${activeWorkspaceId}`)
+    fetch(`/api/channels?workspaceId=${activeWorkspaceId}`)
       .then((r) => r.json())
       .then((d) => {
-        if (d.connected && d.channel) {
+        const ytChannel = d.channels?.find((c: any) => c.platform === "youtube");
+        if (ytChannel) {
           setYtConnected(true);
-          setYtName(d.channel.name);
+          setYtName(ytChannel.accountName);
         } else {
           setYtConnected(false);
           setYtName("");

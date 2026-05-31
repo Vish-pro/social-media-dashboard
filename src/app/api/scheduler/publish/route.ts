@@ -89,12 +89,29 @@ async function handlePublishQueue() {
 
           const videoStream = fs.createReadStream(filePath);
 
+          let videoTitle = post.content ? post.content.slice(0, 100) : "Social Dashboard Video";
+          let videoDesc = post.content ? post.content.slice(0, 5000) : "Social Dashboard Video";
+
+          if (post.platformSettings) {
+            try {
+              const settings = typeof post.platformSettings === "string"
+                ? JSON.parse(post.platformSettings)
+                : post.platformSettings;
+              if (settings.title) {
+                videoTitle = settings.title.slice(0, 100);
+              }
+              if (settings.description) {
+                videoDesc = settings.description.slice(0, 5000);
+              }
+            } catch {}
+          }
+
           const uploadResponse = await youtube.videos.insert({
             part: ["snippet", "status"],
             requestBody: {
               snippet: {
-                title: post.content ? post.content.slice(0, 100) : "Social Dashboard Video",
-                description: post.content ? post.content.slice(0, 100) : "Social Dashboard Video",
+                title: videoTitle,
+                description: videoDesc,
                 categoryId: "22", // People & Blogs
               },
               status: {

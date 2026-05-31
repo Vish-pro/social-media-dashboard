@@ -57,14 +57,17 @@ export default function NewPost() {
     }
 
     // Check YouTube connected status in DB
-    fetch(`/api/youtube/stats?workspaceId=${activeWorkspaceId}`)
+    fetch(`/api/channels?workspaceId=${activeWorkspaceId}`)
       .then((r) => r.json())
       .then((d) => {
         const updatedConn = { ...localConn };
         const updatedConnected = [...localConnected];
 
-        if (d.connected && d.channel) {
-          updatedConn.youtube = { name: d.channel.name };
+        // Find youtube platform connection from channels database list
+        const ytChannel = d.channels?.find((c: any) => c.platform === "youtube");
+
+        if (ytChannel) {
+          updatedConn.youtube = { name: ytChannel.accountName };
           if (!updatedConnected.includes("youtube")) {
             updatedConnected.push("youtube");
           }
@@ -182,9 +185,10 @@ export default function NewPost() {
     if (activeWorkspaceId) {
       const formData = new FormData();
       formData.append("content", content);
+      formData.append("title", title);
       formData.append("workspaceId", activeWorkspaceId);
       formData.append("platforms", JSON.stringify(selectedPlatforms));
-      formData.append("status", isDraft ? "DRAFT" : "PUBLISHED");
+      formData.append("status", isDraft ? "DRAFT" : (scheduleType === "schedule" ? "SCHEDULED" : "PUBLISHED"));
       if (scheduleType === "schedule" && scheduledDate) {
         formData.append("scheduledFor", scheduledDate);
       }
@@ -278,25 +282,65 @@ export default function NewPost() {
             )}
           </div>
 
-          {/* Medium needs a title */}
-          {selectedPlatforms.includes("medium") && (
-            <input
-              className="compose-textarea"
-              placeholder="Title for Medium article (required)"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              style={{ minHeight: "unset", height: "44px", marginBottom: "8px", fontSize: "1rem", fontWeight: 600 }}
-            />
-          )}
+          {/* Unified Details Box (styled like YouTube Studio Video Details) */}
+          <div className="video-details-container">
+            <h3 className="video-details-heading">
+              {selectedPlatforms.includes("youtube") ? "Video details" : "Post details"}
+            </h3>
+            
+            {/* Title field */}
+            <div className="details-field-group">
+              <div className="details-label-row">
+                <label className="details-label">
+                  Title {selectedPlatforms.includes("youtube") || selectedPlatforms.includes("medium") ? "(required)" : "(optional)"}
+                </label>
+                <span className="details-help-icon" title="A catchy title helps your audience find your content.">❓</span>
+              </div>
+              <input
+                className="details-input"
+                placeholder={
+                  selectedPlatforms.includes("youtube")
+                    ? "Add a title that describes your video"
+                    : "Add a title for your post"
+                }
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                maxLength={100}
+              />
+              <div className="details-field-footer">
+                <button className="details-hashtag-btn" type="button" onClick={() => setTitle(prev => prev + " #vavvy")}>
+                  ✨ Suggested hashtags
+                </button>
+                <span className="details-counter">{title.length}/100</span>
+              </div>
+            </div>
 
-          {/* Textarea */}
-          <textarea
-            className="compose-textarea"
-            placeholder="Start writing your post… (Bluesky: max 300 chars)"
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            maxLength={selectedPlatforms.includes("medium") ? 50000 : 2200}
-          />
+            {/* Description / Content field */}
+            <div className="details-field-group" style={{ marginTop: "16px" }}>
+              <div className="details-label-row">
+                <label className="details-label">
+                  {selectedPlatforms.includes("youtube") ? "Description" : "Content / Caption"}
+                </label>
+                <span className="details-help-icon" title="Tell your viewers or readers what your post is about.">❓</span>
+              </div>
+              <textarea
+                className="details-textarea"
+                placeholder={
+                  selectedPlatforms.includes("youtube")
+                    ? "Tell viewers about your video (type @ to mention a channel)"
+                    : "Start writing your post content here… (Bluesky: max 300 chars)"
+                }
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                maxLength={selectedPlatforms.includes("medium") ? 50000 : 2200}
+              />
+              <div className="details-field-footer" style={{ justifyContent: "flex-end" }}>
+                <span className="details-counter">
+                  {content.length}/{selectedPlatforms.includes("medium") ? "50000" : "2200"}
+                </span>
+              </div>
+            </div>
+          </div>
 
           {/* Uploaded media thumbnails */}
           {mediaPreviews.length > 0 && (
