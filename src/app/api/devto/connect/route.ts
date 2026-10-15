@@ -60,7 +60,6 @@ export async function POST(req: NextRequest) {
         workspaceId,
         accessToken: apiKey,
         accountName,
-        username,
         image: imageUrl,
       },
       create: {
@@ -69,7 +68,6 @@ export async function POST(req: NextRequest) {
         accountId: accountId,
         accessToken: apiKey,
         accountName,
-        username,
         image: imageUrl,
       },
     });

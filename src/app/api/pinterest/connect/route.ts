@@ -20,7 +20,6 @@ export async function POST(req: NextRequest) {
     const isMock = accessToken.startsWith("mock_") || accessToken === "PLACEHOLDER";
 
     let accountName = `Pinterest Board: ${boardId}`;
-    let username = boardId; // We store the board ID in username to publish directly to it!
     let accountId = `pinterest_${boardId}`;
     let imageUrl = "https://v1.pinterest.com/favicon.ico";
 
@@ -40,7 +39,6 @@ export async function POST(req: NextRequest) {
 
         const data = await res.json();
         accountName = `Pinterest: ${data.name || boardId}`;
-        username = boardId;
         accountId = String(data.id || `pinterest_${boardId}`);
         imageUrl = data.owner?.image || imageUrl;
       } catch (err: any) {
@@ -60,7 +58,6 @@ export async function POST(req: NextRequest) {
         workspaceId,
         accessToken: accessToken,
         accountName,
-        username: boardId, // Board ID target
         image: imageUrl,
       },
       create: {
@@ -69,7 +66,6 @@ export async function POST(req: NextRequest) {
         accountId: accountId,
         accessToken: accessToken,
         accountName,
-        username: boardId,
         image: imageUrl,
       },
     });

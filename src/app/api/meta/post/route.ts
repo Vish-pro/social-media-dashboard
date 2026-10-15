@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
       const mockUrls: Record<string, string> = {
         facebook: `https://facebook.com/${account.accountId}/posts/${mockPostIds.facebook}`,
         instagram: `https://instagram.com/p/C_mockPostIdig/`,
-        threads: `https://threads.net/@${account.username}/post/${mockPostIds.threads}`,
+        threads: `https://www.threads.net/`,
       };
 
       return NextResponse.json({
@@ -179,10 +179,14 @@ export async function POST(req: NextRequest) {
         throw new Error(publishData.error.message || "Threads container publish failed.");
       }
 
+      // Threads permalinks include the handle, so ask the API for the canonical link
+      const linkRes = await fetch(`https://graph.threads.net/v1.0/${publishData.id}?fields=permalink&access_token=${token}`);
+      const linkData = await linkRes.json().catch(() => ({}));
+
       return NextResponse.json({
         success: true,
         postId: publishData.id,
-        url: `https://threads.net/@${account.username}/post/${publishData.id}`,
+        url: linkData.permalink || "https://www.threads.net/",
       });
     }
 

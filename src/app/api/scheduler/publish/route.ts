@@ -12,6 +12,13 @@ export async function POST(req: Request) {
   return handlePublishQueue();
 }
 
+// platformSettings is Prisma Json: may arrive as a JSON string or an object
+function settingsTitle(settings: unknown): string {
+  const parsed = typeof settings === "string" ? JSON.parse(settings) : settings;
+  const title = parsed && typeof parsed === "object" ? (parsed as { title?: unknown }).title : undefined;
+  return typeof title === "string" && title ? title : "Scheduled Post";
+}
+
 async function handlePublishQueue() {
   try {
     // Find posts ready to publish
@@ -234,7 +241,7 @@ async function handlePublishQueue() {
             body: JSON.stringify({
               workspaceId: post.workspaceId,
               text: post.content || "Scheduled post from SocialPulse",
-              title: post.platformSettings ? (typeof post.platformSettings === "string" ? JSON.parse(post.platformSettings).title : post.platformSettings.title) : "Scheduled Post",
+              title: settingsTitle(post.platformSettings),
             }),
           });
 
@@ -268,7 +275,7 @@ async function handlePublishQueue() {
             body: JSON.stringify({
               workspaceId: post.workspaceId,
               text: post.content || "Scheduled post from SocialPulse",
-              title: post.platformSettings ? (typeof post.platformSettings === "string" ? JSON.parse(post.platformSettings).title : post.platformSettings.title) : "Scheduled Post",
+              title: settingsTitle(post.platformSettings),
             }),
           });
 
@@ -310,7 +317,7 @@ async function handlePublishQueue() {
             body: JSON.stringify({
               workspaceId: post.workspaceId,
               text: post.content || "Scheduled post from SocialPulse",
-              title: post.platformSettings ? (typeof post.platformSettings === "string" ? JSON.parse(post.platformSettings).title : post.platformSettings.title) : "Scheduled Post",
+              title: settingsTitle(post.platformSettings),
               mediaUrls: [mediaUrl],
             }),
           });

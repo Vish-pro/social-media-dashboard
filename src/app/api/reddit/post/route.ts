@@ -32,13 +32,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         success: true,
         postId: mockPostId,
-        url: `https://reddit.com/r/${account.username}/comments/mockpost`,
+        url: `https://reddit.com/r/${account.accountId.split(":").pop()}/comments/mockpost`,
       });
     }
 
     // Live Reddit Publishing
     const token = account.accessToken;
-    const subreddit = account.username; // Target Subreddit
+    const subreddit = account.accountId.split(":").pop() as string; // accountId is "<redditUserId>:<subreddit>"
     const finalTitle = title?.trim() || "SocialPulse Post";
 
     const params = new URLSearchParams();

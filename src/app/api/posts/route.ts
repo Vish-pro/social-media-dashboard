@@ -77,8 +77,8 @@ export async function GET(req: Request) {
     p => p.socialAccount?.platform.toLowerCase() === "youtube" && p.status === "PUBLISHED"
   );
 
-  const videoIdsToQuery = [];
-  const postMapByVideoId = {};
+  const videoIdsToQuery: string[] = [];
+  const postMapByVideoId: Record<string, typeof ytPosts> = {};
 
   for (const post of ytPosts) {
     if (post.platformSettings) {
@@ -134,6 +134,7 @@ export async function GET(req: Request) {
 
         const videoItems = videoListRes.data.items || [];
         for (const item of videoItems) {
+          if (!item.id) continue;
           const stats = item.statistics;
           const matchedPosts = postMapByVideoId[item.id];
           if (stats) {

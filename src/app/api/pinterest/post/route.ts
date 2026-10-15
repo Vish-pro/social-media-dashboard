@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
 
     // Live Pinterest Pin Publishing
     const token = account.accessToken;
-    const boardId = account.username; // Target Board ID
+    const boardId = account.accountId.replace(/^pinterest_/, ""); // accountId holds the target board ID
     const finalTitle = title?.trim() || "SocialPulse Pin";
 
     // Public absolute URL requirement for Pinterest downloads

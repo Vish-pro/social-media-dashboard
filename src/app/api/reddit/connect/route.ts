@@ -20,8 +20,8 @@ export async function POST(req: NextRequest) {
     const isMock = accessToken.startsWith("mock_") || accessToken === "PLACEHOLDER";
 
     let accountName = `r/${subreddit} Subreddit Channel`;
-    let username = subreddit;
-    let accountId = `reddit_${subreddit}`;
+    // accountId is "<redditUserId>:<subreddit>" so the post route knows which subreddit to hit
+    let accountId = `mock:${subreddit}`;
     let imageUrl = "https://www.redditstatic.com/desktop2x/img/favicon/apple-icon-57x57.png";
 
     if (!isMock) {
@@ -42,8 +42,7 @@ export async function POST(req: NextRequest) {
         const data = await res.json();
         const redditUsername = data.name || subreddit;
         accountName = `r/${subreddit} (as u/${redditUsername})`;
-        username = redditUsername;
-        accountId = String(data.id || `reddit_${subreddit}`);
+        accountId = `${data.id || "reddit"}:${subreddit}`;
         imageUrl = data.icon_img || imageUrl;
       } catch (err: any) {
         return NextResponse.json({ error: err.message || "Failed to verify Reddit credentials." }, { status: 400 });
@@ -51,10 +50,6 @@ export async function POST(req: NextRequest) {
     }
 
     // Save Reddit account to SocialAccount
-    // We store the subreddit name in username, and the accessToken is the Token + Subreddit name serialized or just Token.
-    // To preserve the subreddit target, we can store it in the accountId or serialize it.
-    // Let's store "subreddit_name:token" inside accessToken or keep them cleanly.
-    // Even cleaner: we store the subreddit in the 'username' field, so when publishing we know exactly which subreddit to hit!
     const savedAccount = await prisma.socialAccount.upsert({
       where: {
         platform_accountId: {
@@ -66,7 +61,6 @@ export async function POST(req: NextRequest) {
         workspaceId,
         accessToken: accessToken,
         accountName,
-        username: subreddit, // The target subreddit
         image: imageUrl,
       },
       create: {
@@ -75,7 +69,6 @@ export async function POST(req: NextRequest) {
         accountId: accountId,
         accessToken: accessToken,
         accountName,
-        username: subreddit,
         image: imageUrl,
       },
     });

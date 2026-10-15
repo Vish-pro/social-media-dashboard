@@ -34,16 +34,15 @@ export async function GET(req: NextRequest) {
     // Save mock channels into database SocialAccount
     await prisma.socialAccount.upsert({
       where: {
-        workspaceId_platform_accountId: {
-          workspaceId,
+        platform_accountId: {
           platform: scopeType,
           accountId: `mock_${scopeType}_id`,
         }
       },
       update: {
+        workspaceId,
         accessToken: `mock_long_lived_token_${scopeType}`,
         accountName: mock.name,
-        username: mock.handle,
       },
       create: {
         workspaceId,
@@ -51,7 +50,6 @@ export async function GET(req: NextRequest) {
         accountId: `mock_${scopeType}_id`,
         accessToken: `mock_long_lived_token_${scopeType}`,
         accountName: mock.name,
-        username: mock.handle,
       }
     });
 
@@ -102,16 +100,15 @@ export async function GET(req: NextRequest) {
         for (const page of pagesData.data) {
           await prisma.socialAccount.upsert({
             where: {
-              workspaceId_platform_accountId: {
-                workspaceId,
+              platform_accountId: {
                 platform: "facebook",
                 accountId: page.id,
               }
             },
             update: {
+              workspaceId,
               accessToken: page.access_token, // Page Access Token (Never Expires!)
               accountName: page.name,
-              username: page.category || "Facebook Page",
             },
             create: {
               workspaceId,
@@ -119,7 +116,6 @@ export async function GET(req: NextRequest) {
               accountId: page.id,
               accessToken: page.access_token,
               accountName: page.name,
-              username: page.category || "Facebook Page",
             }
           });
         }
@@ -143,16 +139,15 @@ export async function GET(req: NextRequest) {
 
             await prisma.socialAccount.upsert({
               where: {
-                workspaceId_platform_accountId: {
-                  workspaceId,
+                platform_accountId: {
                   platform: "instagram",
                   accountId: igAccount.id,
                 }
               },
               update: {
+                workspaceId,
                 accessToken: longUserToken, // Instagram uses User Access Token
                 accountName: igData.name || page.name,
-                username: igData.username || "instagram_profile",
               },
               create: {
                 workspaceId,
@@ -160,7 +155,6 @@ export async function GET(req: NextRequest) {
                 accountId: igAccount.id,
                 accessToken: longUserToken,
                 accountName: igData.name || page.name,
-                username: igData.username || "instagram_profile",
               }
             });
           }
@@ -174,16 +168,15 @@ export async function GET(req: NextRequest) {
       if (threadsData.id) {
         await prisma.socialAccount.upsert({
           where: {
-            workspaceId_platform_accountId: {
-              workspaceId,
+            platform_accountId: {
               platform: "threads",
               accountId: threadsData.id,
             }
           },
           update: {
+            workspaceId,
             accessToken: longUserToken,
             accountName: threadsData.name || "Threads User",
-            username: threadsData.username || "threads_profile",
           },
           create: {
             workspaceId,
@@ -191,7 +184,6 @@ export async function GET(req: NextRequest) {
             accountId: threadsData.id,
             accessToken: longUserToken,
             accountName: threadsData.name || "Threads User",
-            username: threadsData.username || "threads_profile",
           }
         });
       }

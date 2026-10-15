@@ -482,8 +482,9 @@ export default function NewPost() {
               title: pTitle,
             }),
           });
-          results.push({ 
-            platform: PLATFORMS.find(p => p.id === platformId)?.label || platformId, 
+          const data = await res.json();
+          results.push({
+            platform: PLATFORMS.find(p => p.id === platformId)?.label || platformId,
             ok: res.ok, 
             msg: res.ok ? "Published successfully! 🎉" : data.error 
           });

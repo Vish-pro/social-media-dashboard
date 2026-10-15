@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         success: true,
         postId: String(mockPostId),
-        url: `https://dev.to/${account.username}/mock-article-${mockPostId}`,
+        url: "https://dev.to/dashboard",
       });
     }
 
@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       postId: String(devtoData.id),
-      url: devtoData.url || `https://dev.to/${account.username}/${devtoData.slug}`,
+      url: devtoData.url || "https://dev.to/dashboard",
     });
   } catch (error: any) {
     console.error("DEV.to Publishing Error:", error);
