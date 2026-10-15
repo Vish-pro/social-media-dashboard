@@ -181,6 +181,7 @@ export async function POST(req: Request) {
     let channelIds = [];
     let mediaUrls = [];
     let thread: string[] = [];
+    let platformOverrides: any[] = [];
 
     if (contentType.includes("multipart/form-data")) {
       const formData = await req.formData();
@@ -193,6 +194,11 @@ export async function POST(req: Request) {
       const threadRaw = formData.get("thread") as string;
       if (threadRaw) {
         thread = JSON.parse(threadRaw);
+      }
+
+      const overridesRaw = formData.get("platformOverrides") as string;
+      if (overridesRaw) {
+        platformOverrides = JSON.parse(overridesRaw);
       }
       
       const channelsRaw = formData.get("channelIds") as string;
@@ -236,6 +242,7 @@ export async function POST(req: Request) {
       channelIds = json.channelIds || [];
       mediaUrls = json.mediaUrls || [];
       thread = json.thread || [];
+      platformOverrides = json.platformOverrides || [];
 
       if (json.platforms && channelIds.length === 0) {
         const dbAccounts = await prisma.socialAccount.findMany({
@@ -303,10 +310,18 @@ export async function POST(req: Request) {
             ? (finalStatus === "PUBLISHED" ? "APPROVED" : finalStatus)
             : finalStatus;
 
+          const override = platformOverrides?.find((o: any) => o.platform.toLowerCase() === account?.platform.toLowerCase());
+          const postContent = override ? override.content : content;
+
           const platformSettings: any = {};
-          if (title) platformSettings.title = title;
-          if (account?.platform.toLowerCase() === "x" && thread && thread.length > 0) {
-            platformSettings.thread = thread;
+          const finalTitle = override?.title || title;
+          if (finalTitle) platformSettings.title = finalTitle;
+          
+          if (account?.platform.toLowerCase() === "x") {
+            const postThread = override?.thread || thread;
+            if (postThread && postThread.length > 0) {
+              platformSettings.thread = postThread;
+            }
           }
 
           const post = await tx.post.create({
@@ -316,7 +331,7 @@ export async function POST(req: Request) {
               postGroupId: postGroup.id,
               status: postStatus,
               scheduledFor: scheduledDate,
-              content: content,
+              content: postContent,
               mediaUrls: mediaUrls,
               platformSettings: Object.keys(platformSettings).length > 0 ? platformSettings : undefined,
             },
