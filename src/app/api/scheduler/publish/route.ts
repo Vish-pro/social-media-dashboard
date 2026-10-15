@@ -12,6 +12,13 @@ export async function POST(req: Request) {
   return handlePublishQueue();
 }
 
+// platformSettings is Prisma Json: may arrive as a JSON string or an object
+function settingsTitle(settings: unknown): string {
+  const parsed = typeof settings === "string" ? JSON.parse(settings) : settings;
+  const title = parsed && typeof parsed === "object" ? (parsed as { title?: unknown }).title : undefined;
+  return typeof title === "string" && title ? title : "Scheduled Post";
+}
+
 async function handlePublishQueue() {
   try {
     // Find posts ready to publish
@@ -186,8 +193,160 @@ async function handlePublishQueue() {
             tweetId,
           });
 
+        } else if (["facebook", "instagram", "threads"].includes(platform)) {
+          const account = post.socialAccount;
+          const mediaUrl = post.mediaUrls && typeof post.mediaUrls === "string" 
+            ? JSON.parse(post.mediaUrls)?.[0] 
+            : (Array.isArray(post.mediaUrls) ? post.mediaUrls?.[0] : null);
+
+          // We will call the Meta posting adapter to publish dynamically
+          const metaRes = await fetch(`${process.env.NEXTAUTH_URL || "http://localhost:3000"}/api/meta/post`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              workspaceId: post.workspaceId,
+              platform,
+              text: post.content || "Scheduled post from SocialPulse",
+              mediaUrls: mediaUrl ? [mediaUrl] : undefined,
+            }),
+          });
+
+          if (!metaRes.ok) {
+            const errText = await metaRes.text();
+            throw new Error(`Meta scheduled publishing failed: ${errText}`);
+          }
+
+          const metaData = await metaRes.json();
+          await prisma.post.update({
+            where: { id: post.id },
+            data: {
+              status: "PUBLISHED",
+              publishedAt: new Date(),
+              error: null,
+              platformSettings: metaData.postId ? { postId: metaData.postId, url: metaData.url } : undefined,
+            },
+          });
+
+          results.push({
+            postId: post.id,
+            platform,
+            success: true,
+            url: metaData.url,
+          });
+
+        } else if (platform === "devto") {
+          const devtoRes = await fetch(`${process.env.NEXTAUTH_URL || "http://localhost:3000"}/api/devto/post`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              workspaceId: post.workspaceId,
+              text: post.content || "Scheduled post from SocialPulse",
+              title: settingsTitle(post.platformSettings),
+            }),
+          });
+
+          if (!devtoRes.ok) {
+            const errText = await devtoRes.text();
+            throw new Error(`DEV.to scheduled publishing failed: ${errText}`);
+          }
+
+          const devtoData = await devtoRes.json();
+          await prisma.post.update({
+            where: { id: post.id },
+            data: {
+              status: "PUBLISHED",
+              publishedAt: new Date(),
+              error: null,
+              platformSettings: devtoData.postId ? { postId: devtoData.postId, url: devtoData.url } : undefined,
+            },
+          });
+
+          results.push({
+            postId: post.id,
+            platform: "devto",
+            success: true,
+            url: devtoData.url,
+          });
+
+        } else if (platform === "reddit") {
+          const redditRes = await fetch(`${process.env.NEXTAUTH_URL || "http://localhost:3000"}/api/reddit/post`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              workspaceId: post.workspaceId,
+              text: post.content || "Scheduled post from SocialPulse",
+              title: settingsTitle(post.platformSettings),
+            }),
+          });
+
+          if (!redditRes.ok) {
+            const errText = await redditRes.text();
+            throw new Error(`Reddit scheduled publishing failed: ${errText}`);
+          }
+
+          const redditData = await redditRes.json();
+          await prisma.post.update({
+            where: { id: post.id },
+            data: {
+              status: "PUBLISHED",
+              publishedAt: new Date(),
+              error: null,
+              platformSettings: redditData.postId ? { postId: redditData.postId, url: redditData.url } : undefined,
+            },
+          });
+
+          results.push({
+            postId: post.id,
+            platform: "reddit",
+            success: true,
+            url: redditData.url,
+          });
+
+        } else if (platform === "pinterest") {
+          const mediaUrl = post.mediaUrls && typeof post.mediaUrls === "string" 
+            ? JSON.parse(post.mediaUrls)?.[0] 
+            : (Array.isArray(post.mediaUrls) ? post.mediaUrls?.[0] : null);
+
+          if (!mediaUrl) {
+            throw new Error("Pinterest strictly requires an image attachment to publish.");
+          }
+
+          const pinterestRes = await fetch(`${process.env.NEXTAUTH_URL || "http://localhost:3000"}/api/pinterest/post`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              workspaceId: post.workspaceId,
+              text: post.content || "Scheduled post from SocialPulse",
+              title: settingsTitle(post.platformSettings),
+              mediaUrls: [mediaUrl],
+            }),
+          });
+
+          if (!pinterestRes.ok) {
+            const errText = await pinterestRes.text();
+            throw new Error(`Pinterest scheduled publishing failed: ${errText}`);
+          }
+
+          const pinterestData = await pinterestRes.json();
+          await prisma.post.update({
+            where: { id: post.id },
+            data: {
+              status: "PUBLISHED",
+              publishedAt: new Date(),
+              error: null,
+              platformSettings: pinterestData.postId ? { postId: pinterestData.postId, url: pinterestData.url } : undefined,
+            },
+          });
+
+          results.push({
+            postId: post.id,
+            platform: "pinterest",
+            success: true,
+            url: pinterestData.url,
+          });
+
         } else {
-          // Instagram / Threads / Stub channels
+          // Stub channels
           // Mock successful direct publishing since API connections are in-development or pending config
           await prisma.post.update({
             where: { id: post.id },
